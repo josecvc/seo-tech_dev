@@ -30,7 +30,7 @@ def search_igdb(query):
     else:
         print("Search results:")
         for game in data:
-            print(f"ID: {game['id']} Title: {game['name']}")
+            print(game, "\n")
         return True
     
 if __name__ in "__main__":

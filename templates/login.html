@@ -3,13 +3,16 @@
 
 {%block title%}Login | Vidya!{%endblock%} 
 {%block content%}
-    <form method="POST" enctype=multipart/form-data>
+    <div class="center-container">
+        <form method="POST" enctype=multipart/form-data>
         {{ form.csrf_token() }}
         {{ render_field(form.username) }}
         {{ render_field(form.password) }}
         <input type="submit" value="Login" class="btn btn-primary"/>
-    </form>
-    <span id="link-background">New here? <a id="alternative-choice" href="/register">Register Here</a></span>
+        </form>
+        <span id="link-background">New here? <a id="alternative-choice" href="/register">Register Here</a></span>
+    </div>
+    
 {%endblock%}
 
 {%block scripts%}

@@ -1,0 +1,44 @@
+{%extends "template.html"%}
+
+{%block title%}{{game.title}} | Vidya!{%endblock%}
+{%block head%}<link type="text/css" rel="stylesheet" href="{{url_for('static',filename='styles/self-game.css')}}">{%endblock%}
+
+{%block content%}
+<!-- There will be two parts: One part is the banner, another part is the actual information for the game. When scrolling upwards, you will no longer see the banner -->
+
+<!-- This will act as a banner for the game -->
+<div id="game-bg-container">
+    <div class="blur"></div>
+    <img id="game-bg" src="{{game.background}}">
+</div>
+
+
+    
+
+<div class="game-info-container">
+    <div class="center-container">
+        <h1 class="game-title">{{game.title}}</h1>
+        <div class="game-desc">{{game.desc | safe}}</div>
+        <div class="genre-container">
+            <h2>Genres</h2>
+            <ul class="genre-list">
+                {%for genre in game.genres%}
+                <li class="genre">{{genre.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+
+        <div class="platform-container">
+            <h2>Platforms</h2>
+            <ul class="platform-list">
+                {%for platform in game.platforms%}
+                <li class="platform">{{platform.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+
+{%endblock%}

@@ -1,0 +1,37 @@
+#game-bg-container {
+    /* position:relative; */
+    /* top:0; */
+    z-index: 1;
+    width:100%;
+    height: 240px;
+    overflow-y: hidden;
+    background: transparent no-repeat center;
+    background-size: cover;
+}
+
+#game-bg {
+    width:100%;
+    height:auto;
+    overflow-y: hidden;
+}
+
+#game-bg .blur {
+    height: 100%; 
+    background-color: rgb(255, 131, 131);
+}
+
+.game-info-container {
+    /* z-index: 999; */
+    z-index: 2;
+    /* top: 40%; */
+    width: 100%;
+    background-color: rgb(61, 57, 57);;
+    height: 100%;
+    color:white;
+}
+
+@media only screen and (max-width: 600px) {
+    #game-bg-container {
+        height: 120px;
+    }
+}

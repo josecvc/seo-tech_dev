@@ -10,7 +10,8 @@ def search_moby(query) -> bool:
     if data["games"]: # if the search returns games
         print("Search results:")
         for game in data["games"]:
-            print(f"ID: {game['game_id']} Title: {game['title']}")
+            # print(f"ID: {game['game_id']} Title: {game['title']}")
+            print(game)
             
             # if game["description"]:
             #     print(game["description"])

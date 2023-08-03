@@ -3,15 +3,18 @@
 
 {%block title%}Register | Vidya!{%endblock%} 
 {%block content%}
-    <form method="POST" enctype=multipart/form-data>
-        {{ form.csrf_token() }}
-        {{ render_field(form.username) }}
-        {{ render_field(form.email) }}
-        {{ render_field(form.password) }}
-        {{ render_field(form.confirm) }}
-        <input type="submit" value="Register" class="btn btn-primary"/>
-    </form>
-    <span id="link-background">Already have an account? <a id="alternative-choice" href="/login">Log In Here</a></span>
+    <div class="center-container">
+        <form method="POST" enctype=multipart/form-data>
+            {{ form.csrf_token() }}
+            {{ render_field(form.username) }}
+            {{ render_field(form.email) }}
+            {{ render_field(form.password) }}
+            {{ render_field(form.confirm) }}
+            <input type="submit" value="Register" class="btn btn-primary"/>
+        </form>
+        <span id="link-background">Already have an account? <a id="alternative-choice" href="/login">Log In Here</a></span>
+    </div>
+    
 {%endblock%}
 
 {%block scripts%}

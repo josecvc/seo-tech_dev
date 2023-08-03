@@ -1,0 +1,66 @@
+{% extends "template.html" %} 
+{%block title%}Search {%if query%} results for {{query}}{%endif%} | Vidya!{%endblock%}
+{%block head%}<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/widgets.css')}}">{%endblock%}
+{%block content%}
+<div class="center-container">
+    <form id="search-form" class="input-group" action="/search" method="get">
+        <input class="search-area form-control rounded" style="max-width: 30%;" type="search" name="q" placeholder="Search for a game..." aria-label="Search" aria-describedby="search-addon">
+        <input class="submit-btn btn btn-secondary" type="submit" value="Search">
+    </form>
+    {%if query%}
+    <h1>Search results for "{{query}}"</h1>
+    {%if results.total > 0%}
+        <div class="game-container">
+        {%for game in results.items%}
+            <div class="game-widget">
+                <a class="game-widget-link" id="game-{{game.id}}" href=/games/{{game.id}}>
+                    <div class="image-crop-container">
+                        <img class="game-img" src="{{game.background}}">
+                    </div>
+                    <span class="game-title-container">
+                        <span class="game-title">
+                            {{game.title}}
+                        </span>
+                        
+                    </span>
+                </a>
+            </div>
+            
+        {%endfor%}
+        </div>
+         
+        <div class="pagination">
+            {% if results.has_prev %}
+            <span>
+                <a class="page-number" href="/search?q={{query}}&page={{results.prev_num}}">Back</a>
+            </span>
+            {%endif%}
+
+            {% for number in results.iter_pages() %}
+                {% if results.page != number %}
+                    <span>
+                            <a class='page-number'
+                                href="/search?q={{query}}&page={{number}}">
+                            {{ number }}
+                            </a>
+                    </span>
+                {% else %}
+                    <span class='current-page-number'>{{ number }}</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if results.has_next %}
+                <span>
+                    <<a class="page-number" href="/search?q={{query}}&page={{results.next_num}}">Back</a>
+                </span>
+        {% endif %}
+        </div>
+    {%else%}
+        <h1>No results returned... Search for something else.</h1>
+    {%endif%}
+{%endif%}
+</div>
+
+
+{%endblock%} 
+{%block scripts%} {%endblock%}

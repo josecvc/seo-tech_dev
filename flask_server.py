@@ -5,6 +5,10 @@ from flask_bootstrap import Bootstrap5
 from datetime import datetime
 from forms import *
 
+import aiohttp
+import asyncio
+import utils
+
 # Security Imports
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -74,18 +78,24 @@ class User(db.Model, UserMixin):
         return f"<User>: {self.username}"
     
 class Game(db.Model):
+    '''A Game model for the database'''
     __tablename__ = "game"
 
     id = db.Column(db.Integer, primary_key= True)
+    rawgid = db.Column(db.Integer, nullable=False) # this is so I can update anything
     title = db.Column(db.Text, nullable=False)
     desc = db.Column(db.Text)
     image = db.Column(db.Text) # filename
     background = db.Column(db.Text) # filename
+    metacritic = db.Column(db.Integer)
+    released = db.Column(db.Date)
+    website = db.Column(db.Text)
 
     ratings = db.relationship("User", secondary=user_ratings, backref="user_ratings") # games have ratings
     genres = db.relationship("Genre", secondary=game_genres, backref="game_genres") # games have genres
     platforms = db.relationship("Platform", secondary=game_platforms, backref="game_platforms") # games have platforms
-
+    
+    
     def __repr__(self):
         return f"<Game>: {self.title}"
 
@@ -93,6 +103,7 @@ class Genre(db.Model):
     __tablename__ = "genre"
 
     id = db.Column(db.Integer, primary_key=True)
+    rawgid = db.Column(db.Integer, nullable=False) # this is so I can update anything
     name = db.Column(db.String(30))
 
     def __repr__(self):
@@ -102,6 +113,7 @@ class Platform(db.Model):
     __tablename__ = "platform"
 
     id = db.Column(db.Integer, primary_key=True)
+    rawgid = db.Column(db.Integer, nullable=False) # this is so I can update anything
     name = db.Column(db.String(30))
 
     def __repr__(self):
@@ -188,10 +200,10 @@ def games():
 
 @app.route("/games/<int:game_id>", methods=["POST", "GET"])
 def game_page(game_id:int):
-    if not db.session.query(db.session.query(User).filter_by(id=game_id).exists()).scalar():
+    if not db.session.query(db.session.query(Game).filter_by(id=game_id).exists()).scalar(): # if the game is not in the database
         return render_template("e404.html"), 404
-    game = Game.query.filter_by(id=game_id)
-    return render_template("game_page.html", game=game)
+    game = Game.query.filter_by(id=game_id).one()
+    return render_template("self_game.html", game=game)
 
 @app.route("/user/<string:username>", methods=["POST", "GET"])
 def user_page(username:str):
@@ -199,9 +211,130 @@ def user_page(username:str):
         return render_template("e404.html"), 404
     
     reqUser = User.query.filter_by(username=username).one()
+
+    games_req = user_games.select().where(user_games.c.user_id == reqUser.id).order_by(user_games.c.last_played.desc())
+    games = db.session.execute(games_req).fetchall()
+    
+    return render_template("user_page.html", user = reqUser)
+
+@app.route("/user/<string:username>/report", methods=["POST", "GET"])
+def user_report(username:str):
+    if not db.session.query(db.session.query(User).filter_by(username=username).exists()).scalar():
+        return render_template("e404.html"), 404
+    
+    reqUser = User.query.filter_by(username=username).one()
+    return render_template("user_page.html", user = reqUser)
+
+@app.route("/user/<string:username>/library", methods=["POST", "GET"])
+def user_library(username:str):
+    if not db.session.query(db.session.query(User).filter_by(username=username).exists()).scalar():
+        return render_template("e404.html"), 404
+    
+    reqUser = User.query.filter_by(username=username).one()
     return render_template("user_page.html", user = reqUser)
 
 @app.route("/search", methods=["POST", "GET"])
-def search_results():
+async def search_results():
     '''This will be of the form of a query string, e.g. <domain>.<tld>/search?q=<query>'''
-    return render_template()
+    ## this will be paginated
+    # we first want to check the database, we will use normal search (wildcard)
+    if request.args.get("q") is not None:
+        query =  request.args.get("q")
+
+        # first query the database and paginate since it is much faster than calling an api
+        # if no such game exists from the query, then go to RAWG API using async request
+        # get all games from the api request and add them to the database, then return the search
+        # if no rawg games were returned, then we know we cannot find it
+        if not db.session.query(
+            db.session.query(Game).filter(Game.title.like(f'{query}%')).exists()
+                                                 ).scalar():
+            await get_data(query)
+        results = db.paginate(Game.query.filter(Game.title.like(f'{query}%')))
+        return render_template("search_results.html", results = results, query = query)
+    else:
+       return render_template("search_results.html", query=None)
+       
+async def get_games(session, url):
+    '''Used to turn a game JSON into a Game object'''
+    async with session.get(url) as resp:
+        g_json = await resp.json()
+        
+        if "results" in g_json.keys():
+            real_g = g_json["results"]
+            ## then go through the list and convert into Game objects
+            for game in real_g: # returns the value for each key
+                genres = game["genres"] ## get genres, now we need to check which ones are in the database
+                platforms = game["platforms"]
+
+                data = await get_game(session, f"https://api.rawg.io/api/games/{game['id']}?key=b2c75793dd4744eda9a6ed86652c0b16") # get some additional information for the game
+
+                if game["released"]:
+                    releaseDate = datetime.strptime(game["released"], "%Y-%m-%d").date()
+                else:
+                    releaseDate = None
+
+                if not db.session.query(db.session.query(Game).filter_by(title=game["name"]).exists()).scalar():
+                    newGame = Game(
+                        rawgid = game["id"],
+                        title = game["name"],
+                        desc = data["description_raw"],
+                        metacritic = game["metacritic"],
+                        released = releaseDate,
+                        background = game["background_image"],
+                        website = data["website"]
+                    )
+                    db.session.add(newGame)
+                    db.session.commit()
+
+                g = Game.query.filter_by(title=game["name"]).one()
+                if genres:
+                    for genre in genres:
+                        grName = genre["name"]
+                        if not db.session.query(db.session.query(Genre).filter_by(name=grName).exists()).scalar(): # Add new genre if it does not exist
+                            newGenre = Genre (  
+                                rawgid = genre["id"],
+                                name = genre["name"]
+                            )
+                            
+                            db.session.add(newGenre)
+                            db.session.commit()
+
+                        currGenre = Genre.query.filter_by(name=grName).one() # get the genre and
+                        g.genres.append(currGenre) # add it to list of genres for game
+                if platforms:
+                    for fplatform in platforms:
+                        platform = fplatform["platform"]
+                        pName = platform["name"]
+                        if not db.session.query(db.session.query(Platform).filter_by(name=pName).exists()).scalar(): # Add new platform if it does not exist
+                            newPlat = Platform (  
+                                rawgid = platform["id"],
+                                name = platform["name"]
+                            )
+                            
+                            db.session.add(newPlat)
+                            db.session.commit()
+
+                        currPlat = Platform.query.filter_by(name=pName).one() # get the platform and
+                        g.platforms.append(currPlat) # add it to list of platform for game
+                
+                db.session.commit()
+
+
+async def get_data(query:str="", pages:int = 3):
+    '''Async retrieves game data from the API'''
+    async with aiohttp.ClientSession() as session:
+        games = []
+        for i in range(1, pages+1):
+            game_url = f"https://api.rawg.io/api/games?key=b2c75793dd4744eda9a6ed86652c0b16&search={utils.escape(query)}&page_size=50&page={i}"
+             ## build up a collection of games
+
+            games.append(asyncio.ensure_future(get_games(session, game_url)))
+
+        # we can then insert this into the database
+
+        paginated_games = await asyncio.gather(*games)
+
+async def get_game(session, url): 
+    '''This is just to async retrieve additional game information'''
+    async with session.get(url) as response:
+        return await response.json()
