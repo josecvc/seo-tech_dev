@@ -1,0 +1,18 @@
+{%extends "user_page.html"%}
+
+{%block focus_title%}Game Page{%endblock%}
+
+{%block focus%}
+{%if games|length > 0%}
+<ul class="game-list">
+{% for id, game in games.items()%}
+<li class="game-slot">
+    {{game["game_object"].title}}
+</li>
+{%endfor%}
+</ul>
+{%else%}
+<p>Play something man. Come on!</p>
+{%endif%}
+
+{%endblock%}

@@ -37,6 +37,8 @@ bootstrap=Bootstrap5(app)
 def load_user(user_id):
     return User.query.get(user_id)
 
+# ----------- Foreign Relations
+
 user_games = db.Table("user_games", # since many users can play many games
                         db.Column("user_id", db.Integer, db.ForeignKey("user.id")),
                         db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
@@ -64,6 +66,22 @@ game_platforms = db.Table("game_platforms",
                         db.Column("platform_id", db.Integer, db.ForeignKey("platform.id")),
                         )
 
+game_publishers = db.Table("game_publishers", 
+                        db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
+                        db.Column("publisher_id", db.Integer, db.ForeignKey("publisher.id")),
+                        )
+
+game_developers = db.Table("game_developers", 
+                        db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
+                        db.Column("developer_id", db.Integer, db.ForeignKey("developer.id")),
+                        )
+
+collection_games = db.Table("collection_games", 
+                            db.Column("collection_id", db.Integer, db.ForeignKey("collection.id")),
+                            db.Column("game_id", db.Integer, db.ForeignKey("game.id"))         
+                            )
+
+# ---------------- Models
 class User(db.Model, UserMixin):
     __tablename__ = "user"
 
@@ -119,8 +137,38 @@ class Platform(db.Model):
     def __repr__(self):
         return f"<Platform>: {self.name}"
 
+class Publisher(db.Model):
+    __tablename__ = "publisher"
 
+    id = db.Column(db.Integer, primary_key=True)
+    rawgid = db.Column(db.Integer, nullable=False) # this is so I can update anything
+    name = db.Column(db.String(30))
 
+    def __repr__(self):
+        return f"<Publisher>: {self.name}"
+
+class Developer(db.Model):
+    __tablename__ = "developer"
+
+    id = db.Column(db.Integer, primary_key=True)
+    rawgid = db.Column(db.Integer, nullable=False) # this is so I can update anything
+    name = db.Column(db.String(30))
+
+    def __repr__(self):
+        return f"<Developer>: {self.name}"
+
+class Collection(db.Model):
+    __tablename__ = "collection"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    name = db.Column(db.String(30), nullable=False)
+    desc = db.Column(db.Text)
+    games = db.relationship("Game", secondary=collection_games, backref="collection_games") # games have platforms
+    
+    def __repr__(self):
+        return f"<Collection>: {self.name}; User ID: {self.user_id}"
+    
 # ---------------------------- Auth Routes
 
 @app.errorhandler(404)
@@ -178,6 +226,11 @@ def register():
 
     return render_template("register.html", form=register_form)
 
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def account_settings():
+    return
+
 # ------------ Main Routes
 
 @app.route("/", methods=["POST", "GET"]) # default page, if not logged in you get redirected here if you try to go to a personalised homepage
@@ -207,31 +260,64 @@ def game_page(game_id:int):
 
 @app.route("/user/<string:username>", methods=["POST", "GET"])
 def user_page(username:str):
-    if not db.session.query(db.session.query(User).filter_by(username=username).exists()).scalar():
+    try:
+        reqUser = User.query.filter_by(username=username).one()
+    except:
         return render_template("e404.html"), 404
-    
-    reqUser = User.query.filter_by(username=username).one()
+    else:    
+        games_req = user_games.select().where(user_games.c.user_id == reqUser.id).order_by(user_games.c.last_played.desc())
+        game_links = db.session.execute(games_req).fetchall()
 
-    games_req = user_games.select().where(user_games.c.user_id == reqUser.id).order_by(user_games.c.last_played.desc())
-    games = db.session.execute(games_req).fetchall()
+        games = {}
+        limit = 10
+        '''
+        GAME LINK
+        (USER ID, GAME ID, HOURS, MINUTES, LAST_PLAYED)
+        '''
+        for link in game_links:
+            print(link)
+            if limit == 0:
+                break
+            the_game = Game.query.get(link[1])
+            games[link[1]] = {
+                "game_object": the_game,
+                "hours_played": link[2],
+                "minutes_played": link[3],
+                "last_played": link[4]
+            }
+            limit -= 1
+        return render_template("user_overview.html", user = reqUser, games=games) 
+
+    
     
     return render_template("user_page.html", user = reqUser)
 
 @app.route("/user/<string:username>/report", methods=["POST", "GET"])
 def user_report(username:str):
-    if not db.session.query(db.session.query(User).filter_by(username=username).exists()).scalar():
+    try:
+        reqUser = User.query.filter_by(username=username).one()
+    except:
         return render_template("e404.html"), 404
-    
-    reqUser = User.query.filter_by(username=username).one()
-    return render_template("user_page.html", user = reqUser)
+    else:
+        return render_template("user_page.html", user = reqUser)
 
 @app.route("/user/<string:username>/library", methods=["POST", "GET"])
 def user_library(username:str):
-    if not db.session.query(db.session.query(User).filter_by(username=username).exists()).scalar():
+    try:
+        reqUser = User.query.filter_by(username=username).one()
+    except:
         return render_template("e404.html"), 404
-    
-    reqUser = User.query.filter_by(username=username).one()
-    return render_template("user_page.html", user = reqUser)
+    else:
+        return render_template("user_page.html", user = reqUser)
+
+@app.route("/user/<string:username>/library", methods=["POST", "GET"])
+def user_collections(username:str):
+    try:
+        reqUser = User.query.filter_by(username=username).one()
+    except:
+        return render_template("e404.html"), 404
+    else:
+        return render_template("user_page.html", user = reqUser)
 
 @app.route("/search", methods=["POST", "GET"])
 async def search_results():
@@ -332,7 +418,7 @@ async def get_data(query:str="", pages:int = 3):
 
         # we can then insert this into the database
 
-        paginated_games = await asyncio.gather(*games)
+        await asyncio.gather(*games)
 
 async def get_game(session, url): 
     '''This is just to async retrieve additional game information'''

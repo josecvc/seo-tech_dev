@@ -1,7 +1,7 @@
 {%extends "template.html"%}
 {% from 'bootstrap5/nav.html' import render_nav_item %}
 
-{%block title%}{{user.username}}'s Game Page | Vidya!{%endblock%}
+{%block title%}{{user.username}}'s {%block focus_title%}{%endblock%} | Vidya!{%endblock%}
 {%block head%}<link type="text/css" rel="stylesheet" href="{{url_for('static',filename='styles/user-page.css')}}">{%endblock%}
 {%block content%}
 <!--
@@ -50,7 +50,12 @@
                 <a class="nav-item nav-link" href="/user/{{user.username}}/collections">Collections</a>
                 <a class="nav-item nav-link" href="/user/{{user.username}}/reviews">Reviews</a>
         </nav>
-        
+        <div class="user-focus-content">
+            {%block focus%}
+    
+            {%endblock%}
+        </div>
     </div>
+    
 </div>
 {%endblock%}
