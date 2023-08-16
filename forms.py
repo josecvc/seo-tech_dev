@@ -1,4 +1,4 @@
-from wtforms import Form, StringField, PasswordField, validators, IntegerField, TextAreaField, DateField, TimeField, EmailField, ValidationError
+from wtforms import Form, StringField, PasswordField, validators, IntegerField, TextAreaField, DateField, TimeField, EmailField, ValidationError, BooleanField, HiddenField, SelectField
 from flask_wtf import FlaskForm 
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 
@@ -24,3 +24,20 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password",[
         validators.DataRequired()
     ])
+
+class CollectionForm(FlaskForm):
+    collection_name = StringField("Title", [validators.DataRequired()])
+    collection_desc = TextAreaField("Description (Optional)")
+    collection_boolean = BooleanField("Public?")
+
+class GameForm(FlaskForm): # Simple form for searching things (will not use async)
+    game_title = StringField("Title")
+
+class FragForm(FlaskForm): # For manual input
+    date_started = DateField("Date", [validators.DataRequired()])
+    time_started = TimeField("Time", [validators.DataRequired()], format="%H:%M")
+    time_played = IntegerField("Playtime", [validators.DataRequired()])
+    unit = SelectField(validators=[validators.DataRequired()], choices=["Hours", "Minutes", "Seconds"])
+
+class RatingForm(FlaskForm):
+    review = TextAreaField()

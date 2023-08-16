@@ -1,0 +1,68 @@
+{% extends "template.html" %}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{%block title%}{{collection.name}} | {{user.username}}'s Collection | Vidya!{%endblock%}
+
+{%block head%}
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">
+{%endblock%}
+
+{%block content%}
+
+<div class="center-container">
+    <h2>{{collection.name}}</h2>
+    {%if user.id == current_user.id%}
+    <button class="btn btn-secondary" id="create-popup">Add a game</button>
+    {%endif%}
+    <ul class="game-list">
+    {%for game in collection.games%}
+    <li class="game-slot">
+        <div class="image-backdrop">
+            <img class="backdrop-pic" src="{{game.background}}">
+            <div class="part-blur">
+            </div>
+            
+        </div>
+        <div class="log-info">
+            <div class="game-title">
+                {{game.title}}
+            </div>
+        </div>
+        
+    </li>
+    {%endfor%}
+    </ul>
+</div>
+
+<div id="modal">
+    <div id="modal-content" class="animate">
+        <h2>Add a game</h2>
+        <form method="GET" id="searchbox">
+            {{ form.csrf_token() }}
+            {{render_field(form.game_title)}}
+            <input class="button-main" type="submit" value="Search">
+        </form>
+        <div id="suggest-results">
+           <span id="suggest-placeholder">Search for games and they show up here</span>
+        </div>
+        <h2 id="show-chosen"></h2>
+        <div id="suggest-focus">
+            
+        </div>
+        <form method="POST" id="form" enctype=multipart/form-data>
+                    <input type="hidden" id="collection_id" name="collection_id" value="{{collection.id}}">
+                    <input type="hidden" id="game_id" name="game_id" value="0">
+                    <input class="button-main" type="submit" value="Add"> <!-- Collection submit button-->
+            </form>
+        
+        </div>
+        
+    </div>
+</div>
+{%endblock%}
+
+{%block scripts%}
+<script src="{{url_for('static',filename='scripts/modal.js')}}"></script>
+<script src="{{url_for('static',filename='scripts/user-game-search.js')}}"></script>
+<script src="{{url_for('static',filename='scripts/collection-manage.js')}}"></script>
+{%endblock%}

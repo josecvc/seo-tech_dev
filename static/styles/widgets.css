@@ -33,8 +33,3 @@
     align-items: flex-start 
 }
 
-.pagination {
-    display: flex;
-    justify-content: center;
-    padding-top: 10px;
-}

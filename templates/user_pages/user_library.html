@@ -1,0 +1,113 @@
+{%extends "user_page.html"%}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{%block focus_title%}Library{%endblock%}
+{%block head%}<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">{%endblock%}
+{%block focus%}
+
+{%if user.id == current_user.id%}
+<button class="btn btn-secondary" id="create-popup">Add a frag</button>
+{%endif%}
+
+{%if sessions.total > 0%}
+<ul class="game-list">
+{% for session in sessions.items%}
+<li class="game-slot">
+    <div class="image-backdrop">
+        <img class="backdrop-pic" src="{{session.game.background}}">
+        <div class="part-blur">
+        </div>
+        
+    </div>
+    <div class="log-info">
+        <div class="game-title">
+            {{session.game.title}}
+        </div>
+        <div class="last_played">
+            <span class="play-date">Played on {{session.last_played.strftime("%d/%m/%Y %H:%M:%S")}}</span>
+        </div>
+        <div class="hours-played">
+            <span class="play-hours">Playtime: {%if session.time_played>=7200 %} {{session.time_played / 3600}} hours{%elif session.time_played >= 60%} {{session.time_played /60 }} minutes{%else%}Less than a minute{%endif%}</span>
+        </div>
+    </div>
+    
+</li>
+{%endfor%}
+</ul>
+
+<div class="pagination">
+    {% if sessions.has_prev %}
+    <span>
+        <a class="page-number" href="//user/{[reqUser.username}}?page={{sessions.prev_num}}">Back</a>
+    </span>
+    {%endif%}
+
+    {% for number in sessions.iter_pages() %}
+        {% if sessions.page != number %}
+            <span>
+                    <a class='page-number'
+                        href="/user/{[reqUser.username}}?page={{number}}">
+                    {{ number }}
+                    </a>
+            </span>
+        {% else %}
+            <span class='current-page-number'>{{ number }}</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if sessions.has_next %}
+        <span>
+            <<a class="page-number" href="/user/{[reqUser.username}}?page={{sessions.next_num}}">Next</a>
+        </span>
+{% endif %}
+</div>
+{%else%}
+<p>Play something man. Come on!</p>
+{%endif%}
+
+{% if current_user.is_authenticated and (current_user.id == user.id)%} <!-- Make sure that this modal is only available if logged in and this is your page -->
+<div id="modal">
+    <div id="modal-content" class="animate">
+        <h2>Add Frag</h2>
+        <div class="form-split">
+            <div class="form-right-split">
+                <form method="GET" id="searchbox">
+                    {{ search_form.csrf_token() }}
+                    {{render_field(search_form.game_title)}}
+                    <input class="button-main" type="submit" value="Search">
+                </form>
+                <div id="suggest-results">
+                   <span id="suggest-placeholder">Search for games and they show up here</span>
+                </div>
+                <h2 id="show-chosen"></h2>
+                <div id="suggest-focus">
+                    
+                </div>
+            </div>
+
+            <div class="form-left-split">
+                <form method="POST" id="form" enctype=multipart/form-data>
+                    {{ frag_form.csrf_token() }}
+                    {{render_field(frag_form.date_started)}}
+                    {{render_field(frag_form.time_started)}}
+                    {{render_field(frag_form.time_played)}}
+                    {{render_field(frag_form.unit)}}
+                    <input type="hidden" id="game_id" name="game_id" value="0">
+                <input class="button-main" type="submit" value="Frag"> <!-- Collection submit button-->
+                </form>
+            </div>
+            
+        </div>
+        
+    </div>
+</div>
+{%endif%}
+
+{%endblock%}
+
+{%block scripts%}
+<script src="{{url_for('static',filename='scripts/modal.js')}}"></script>
+<script src="{{url_for('static',filename='scripts/user-game-search.js')}}"></script>
+<script src="{{url_for('static',filename='scripts/frag-manage.js')}}"></script>
+
+{%endblock%}

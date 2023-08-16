@@ -1,0 +1,79 @@
+@import "modal.css";
+
+.game-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.game-slot, .collection-slot {
+    display:flex;
+    height:150px;
+    list-style: none;
+    float: left;
+    padding:10px;
+}
+
+.image-backdrop {
+    height: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background: transparent no-repeat center;
+    background-size: cover;
+}
+
+.log-info {
+    position: absolute;
+    z-index: 4;
+}
+
+.part-blur {
+    background: rgba(50, 70, 80, 0.7);
+    overflow: hidden;
+    height: 100%;
+}
+
+.backdrop-pic {
+    width:100%;
+    height:auto;
+    overflow: hidden;
+    opacity: 0.5;
+    filter:  invert(0%) sepia(6%) saturate(1%) hue-rotate(285deg) brightness(50%);
+}
+
+#suggest-results {
+    height: 300px;
+    background-color: white;
+    margin: 0 auto;
+    margin:5px;
+    border-radius: 10px;
+    color:black;
+    overflow-y: scroll !important;
+}
+
+#suggest-focus {
+    height: 100%;
+    /* background-color: white; */
+    margin: 0 auto;
+    margin:5px;
+    border-radius: 10px;
+    color:black;
+}
+
+.game-card {
+    margin-top: 10px;
+    height:100px;
+    margin-bottom: 10px;
+    position:relative;
+    font-size: x-large;
+}
+
+.form-split {
+    display: flex;
+    flex-direction: row;
+}
+
+.form-left-split, .form-right-split {
+    width:100%;
+    overflow-y: hidden;
+    margin: 10px;
+}

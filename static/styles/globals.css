@@ -227,3 +227,9 @@ main {
 .game-title {
     margin: 0 auto;
 }
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    padding-top: 10px;
+}

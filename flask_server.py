@@ -5,6 +5,8 @@ from flask_bootstrap import Bootstrap5
 from datetime import datetime
 from forms import *
 
+from keys import *
+import os
 import aiohttp
 import asyncio
 import utils
@@ -39,22 +41,13 @@ def load_user(user_id):
 
 # ----------- Foreign Relations
 
-user_games = db.Table("user_games", # since many users can play many games
-                        db.Column("user_id", db.Integer, db.ForeignKey("user.id")),
-                        db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
-                        db.Column("hours_played", db.Integer),
-                        db.Column("minutes_played", db.Integer),
-                        db.Column("last_played", db.DateTime)
-                        )
-
-user_ratings = db.Table("user_ratings", 
-                        db.Column("user_id", db.Integer, db.ForeignKey("user.id")),
-                        db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
-
-                        db.Column("rating", db.Integer),
-                        db.Column("timestamp", db.DateTime),
-                        db.Column("review", db.Text)
-                        )
+# user_games = db.Table("user_games", # since many users can play many games (might turn this into a model)
+#                         db.Column("user_id", db.Integer, db.ForeignKey("user.id")),
+#                         db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
+#                         db.Column("hours_played", db.Integer),
+#                         db.Column("minutes_played", db.Integer),
+#                         db.Column("last_played", db.DateTime)
+#                         )
 
 game_genres = db.Table("game_genres", 
                         db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
@@ -90,7 +83,6 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(16))
     create_date = db.Column(db.DateTime)
-    games = db.relationship("Game", secondary=user_games, backref="games_played") # user plays games
 
     def __repr__(self):
         return f"<User>: {self.username}"
@@ -109,10 +101,10 @@ class Game(db.Model):
     released = db.Column(db.Date)
     website = db.Column(db.Text)
 
-    ratings = db.relationship("User", secondary=user_ratings, backref="user_ratings") # games have ratings
     genres = db.relationship("Genre", secondary=game_genres, backref="game_genres") # games have genres
     platforms = db.relationship("Platform", secondary=game_platforms, backref="game_platforms") # games have platforms
-    
+    publishers = db.relationship("Publisher", secondary=game_publishers, backref="game_publishers")
+    developers = db.relationship("Developer", secondary=game_developers, backref="game_developers")
     
     def __repr__(self):
         return f"<Game>: {self.title}"
@@ -163,12 +155,45 @@ class Collection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     name = db.Column(db.String(30), nullable=False)
+    public = db.Column(db.Boolean)
     desc = db.Column(db.Text)
+    created = db.Column(db.DateTime)
+    updated = db.Column(db.DateTime)
     games = db.relationship("Game", secondary=collection_games, backref="collection_games") # games have platforms
     
     def __repr__(self):
         return f"<Collection>: {self.name}; User ID: {self.user_id}"
+
+class Rating(db.Model):
+    __tablename__ = "rating"
+    id = db.Column(db.Integer, primary_key=True) 
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    game_id = db.Column(db.Integer, db.ForeignKey("game.id"))
+
+    rating = db.Column("rating", db.Integer, nullable = False)
+    timestamp = db.Column("timestamp", db.DateTime)
+    review = db.Column("review", db.Text)
+
+    user = db.relationship("User", backref="ratings")
+    game = db.relationship("Game", backref="ratings")
+
+    def __repr__(self):
+        return f"<Rating {self.id}>: User ID: {self.user_id}; Game ID: {self.game_id}; Rating: {self.rating}"
     
+class Frag(db.Model):
+    __tablename__ = "frag"
+    id = db.Column(db.Integer, primary_key = True) # the frag id
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    game_id = db.Column(db.Integer, db.ForeignKey("game.id"))
+
+    time_played = db.Column(db.BigInteger)
+    last_played = db.Column(db.DateTime)
+    
+    user = db.relationship("User", backref="session")
+    game = db.relationship("Game", backref="session")
+
+    def __repr__(self):
+        return f"<Frag {self.id}>: User ID: {self.user_id}; Game ID: {self.game_id}"
 # ---------------------------- Auth Routes
 
 @app.errorhandler(404)
@@ -190,8 +215,6 @@ def login():
             if check_password_hash(requestedUser.password, password): # If it is the same password
                 login_user(requestedUser) # log them in and redirect to homepage
                 return redirect(url_for("home"))
-            else:
-                return Response(status=401)
     return render_template("login.html", form=login_form)
 
 @app.route("/logout", methods=["POST","GET"])
@@ -249,14 +272,41 @@ def home():
 
 @app.route("/games", methods=["POST", "GET"])
 def games():
+    ## this is going to be a series of queries
+    # newly released games
+    # most popular games of current year
+    # most popular games of all time
+    # most trending games
+    # popular genres
     return render_template("games.html")
 
-@app.route("/games/<int:game_id>", methods=["POST", "GET"])
+@app.route("/games/<int:game_id>/", methods=["POST", "GET"])
 def game_page(game_id:int):
     if not db.session.query(db.session.query(Game).filter_by(id=game_id).exists()).scalar(): # if the game is not in the database
         return render_template("e404.html"), 404
     game = Game.query.filter_by(id=game_id).one()
-    return render_template("self_game.html", game=game)
+
+    rating_form = RatingForm(request.form)
+
+    ratings = Rating.query.filter_by(game_id = game_id).all()
+    collections = Collection.query.filter(Collection.games.any(id=game_id)).limit(10).all()
+    
+    real_collections = []
+
+    for collection in collections:
+        real_collections.append((collection, User.query.get(collection.user_id)))
+    total_sessions = Frag.query.filter_by(game_id=game_id).all()
+
+    if current_user.is_authenticated:
+        ## we want to check how many times the user has played the game, and how many hours/minutes in total
+        ## we can also show the total number of people who have played the game
+        sessions = Frag.query.\
+            filter_by(game_id=game_id).\
+            filter_by(user_id=current_user.id).all()
+        
+        return render_template("self_game.html", game=game, rating_form=rating_form, ratings=ratings, collections = real_collections, self_frags = sessions, all_frags = total_sessions)
+    
+    return render_template("self_game.html", game=game, rating_form=rating_form, ratings=ratings, collections = real_collections, all_frags = total_sessions)
 
 @app.route("/user/<string:username>", methods=["POST", "GET"])
 def user_page(username:str):
@@ -265,32 +315,9 @@ def user_page(username:str):
     except:
         return render_template("e404.html"), 404
     else:    
-        games_req = user_games.select().where(user_games.c.user_id == reqUser.id).order_by(user_games.c.last_played.desc())
-        game_links = db.session.execute(games_req).fetchall()
+        sessions = Frag.query.filter_by(user_id = reqUser.id).order_by(Frag.last_played.desc()).limit(10).all()
+        return render_template("user_pages/user_overview.html", user = reqUser, sessions = sessions) 
 
-        games = {}
-        limit = 10
-        '''
-        GAME LINK
-        (USER ID, GAME ID, HOURS, MINUTES, LAST_PLAYED)
-        '''
-        for link in game_links:
-            print(link)
-            if limit == 0:
-                break
-            the_game = Game.query.get(link[1])
-            games[link[1]] = {
-                "game_object": the_game,
-                "hours_played": link[2],
-                "minutes_played": link[3],
-                "last_played": link[4]
-            }
-            limit -= 1
-        return render_template("user_overview.html", user = reqUser, games=games) 
-
-    
-    
-    return render_template("user_page.html", user = reqUser)
 
 @app.route("/user/<string:username>/report", methods=["POST", "GET"])
 def user_report(username:str):
@@ -308,16 +335,62 @@ def user_library(username:str):
     except:
         return render_template("e404.html"), 404
     else:
-        return render_template("user_page.html", user = reqUser)
+        session_select = Frag.query.filter_by(user_id = reqUser.id).order_by(Frag.last_played.desc())
+        sessions = db.paginate(session_select) 
 
-@app.route("/user/<string:username>/library", methods=["POST", "GET"])
+        f_form = FragForm(request.form)
+        s_form = GameForm(request.form)
+
+        return render_template("user_pages/user_library.html", user = reqUser, sessions = sessions, frag_form = f_form, search_form = s_form)
+
+@app.route("/user/<string:username>/collections", methods=["POST", "GET"])
 def user_collections(username:str):
     try:
         reqUser = User.query.filter_by(username=username).one()
     except:
         return render_template("e404.html"), 404
     else:
-        return render_template("user_page.html", user = reqUser)
+        form:FlaskForm = CollectionForm(request.form)
+        if current_user.is_authenticated:
+            if form.validate_on_submit() and reqUser.id == current_user.id: ## create the collection and redirect
+                timestamp = datetime.now()
+                if form.collection_desc.data == "":
+                    desc = None
+                else:
+                    desc = form.collection_desc.data
+
+                newCollection = Collection(
+                    user_id = current_user.id,
+                    name = form.collection_name.data,
+                    desc = desc,
+                    public = form.collection_boolean.data,
+                    created = timestamp,
+                    updated = timestamp
+                )
+                
+                db.session.add(newCollection)
+                db.session.commit()
+
+                return redirect(url_for("self_collection", username=current_user.username, collection_id=newCollection.id))
+            
+        collections = db.paginate(Collection.query.filter_by(user_id = reqUser.id))
+        return render_template("user_pages/user_collections.html", user = reqUser, collections = collections, form=form)
+
+@app.route("/user/<string:username>/collections/<int:collection_id>", methods=["POST", "GET"])
+def self_collection(username:str, collection_id:str):
+    ## Each collection will have games which you can call with collection.games.
+    try:
+        reqUser = User.query.filter_by(username=username).one()
+        collection = Collection.query.get(collection_id)
+    except:
+        return render_template("e404.html"), 404
+    else:
+        if collection.public or (current_user.is_authenticated and reqUser.id == current_user.id):
+            form = GameForm(request.form)
+            return render_template("user_pages/self_collection.html", user = reqUser, collection = collection, form=form)
+        else:
+
+            return render_template("e404.html"), 404
 
 @app.route("/search", methods=["POST", "GET"])
 async def search_results():
@@ -339,7 +412,94 @@ async def search_results():
         return render_template("search_results.html", results = results, query = query)
     else:
        return render_template("search_results.html", query=None)
-       
+
+@app.post("/addtocollection")
+def add_to_collection():
+    requested = request.get_json()
+    print(requested)
+    collection:Collection = Collection.query.get(int(requested["collection_id"]))
+    game:Game = Game.query.get(int(requested["game_id"]))
+    collection.games.append(game)
+    db.session.commit()
+    return Response(status=302)
+
+@app.get("/suggestgames")
+def suggest_games():
+    query = request.args["q"]
+    filter = Game.query.filter(Game.title.contains(query)).limit(30).all()
+    games = []
+    for game in filter:
+        games.append({
+            "id": game.id,
+            "title": game.title,
+            "background": game.background,
+        })
+    return jsonify(games)
+
+
+@app.post("/addfrag")
+@login_required
+def add_frag():
+    '''
+    {
+        game_id: k,
+        date_played: dd/mm/yyyy,
+        time_played: h, m, s, (Must be at least 5 minutes and at most 10 hours)
+        unit: s
+    }
+    '''
+    frag = request.get_json()
+    
+    # make sure all ints are actual ints
+    frag["time_played"] = int(frag["time_played"]) 
+
+    if frag["unit"] == "Hours":
+        frag["time_played"] *= 3600
+    elif frag["unit"] == "Minutes":
+        frag["time_played"] *= 60
+    # create timestamp
+    timestr = frag["datestamp"] + " " + frag["timestamp"]
+    timestamp = datetime.strptime(timestr, "%Y-%m-%d %H:%M")
+    
+    new_frag = Frag(
+        user_id = current_user.id, 
+        game_id = int(frag["game_id"]),
+        last_played = timestamp,
+        time_played = frag["time_played"]
+    )
+    db.session.add(new_frag)
+    db.session.commit()
+
+    return Response(status=201)
+@app.post("/addrating")
+def add_rating():
+    print("we're here")
+    rating_block = request.get_json()
+    ## first check if the person has already reviewed the game
+    if not db.session.query(db.session.query(Rating).filter_by(game_id=rating_block["game_id"]).\
+                filter_by(user_id=current_user.id).exists()).scalar():
+        
+        new_rating = Rating(
+            user_id = current_user.id,
+            game_id = int(rating_block["game_id"]),
+            rating = int(rating_block["rating"]),
+            timestamp = datetime.now(),
+            review = rating_block["review"]
+        )
+        db.session.add(new_rating)
+        db.session.commit()
+    else:
+        rating_update = Rating.query.filter_by(game_id = rating_block["game_id"]).\
+        filter_by(user_id=current_user.id).one()
+
+        rating_update.rating = int(rating_block["rating"])
+        rating_update.timestamp = datetime.now()
+        rating_update.review = rating_block["review"]
+
+        db.session.commit()
+
+    return Response(status=201)
+
 async def get_games(session, url):
     '''Used to turn a game JSON into a Game object'''
     async with session.get(url) as resp:
@@ -351,15 +511,17 @@ async def get_games(session, url):
             for game in real_g: # returns the value for each key
                 genres = game["genres"] ## get genres, now we need to check which ones are in the database
                 platforms = game["platforms"]
+                publishers = game["publishers"]
+                developers = game["developers"]
 
-                data = await get_game(session, f"https://api.rawg.io/api/games/{game['id']}?key=b2c75793dd4744eda9a6ed86652c0b16") # get some additional information for the game
+                data = await get_game(session, f"https://api.rawg.io/api/games/{game['id']}?key={os.environ['RAWG_KEY']}") # get some additional information for the game
 
                 if game["released"]:
                     releaseDate = datetime.strptime(game["released"], "%Y-%m-%d").date()
                 else:
                     releaseDate = None
 
-                if not db.session.query(db.session.query(Game).filter_by(title=game["name"]).exists()).scalar():
+                if not db.session.query(db.session.query(Game).filter_by(title=game["name"]).exists()).scalar(): # if the game is not in the database 
                     newGame = Game(
                         rawgid = game["id"],
                         title = game["name"],
@@ -373,6 +535,9 @@ async def get_games(session, url):
                     db.session.commit()
 
                 g = Game.query.filter_by(title=game["name"]).one()
+
+                # Check if the update date is different to the row's update date, so we can change anything if needed
+
                 if genres:
                     for genre in genres:
                         grName = genre["name"]
@@ -387,21 +552,37 @@ async def get_games(session, url):
 
                         currGenre = Genre.query.filter_by(name=grName).one() # get the genre and
                         g.genres.append(currGenre) # add it to list of genres for game
-                if platforms:
-                    for fplatform in platforms:
-                        platform = fplatform["platform"]
-                        pName = platform["name"]
-                        if not db.session.query(db.session.query(Platform).filter_by(name=pName).exists()).scalar(): # Add new platform if it does not exist
-                            newPlat = Platform (  
-                                rawgid = platform["id"],
-                                name = platform["name"]
+                if publishers:
+                    for fpublisher in publishers:
+                        publisher = fpublisher["publisher"]
+                        pName = publisher["name"]
+                        if not db.session.query(db.session.query(Publisher).filter_by(name=pName).exists()).scalar(): # Add new platform if it does not exist
+                            newPub = Platform (  
+                                rawgid = publisher["id"],
+                                name = publisher["name"]
                             )
                             
-                            db.session.add(newPlat)
+                            db.session.add(newPub)
                             db.session.commit()
 
-                        currPlat = Platform.query.filter_by(name=pName).one() # get the platform and
-                        g.platforms.append(currPlat) # add it to list of platform for game
+                        currPub = Publisher.query.filter_by(name=pName).one() # get the platform and
+                        g.publishers.append(currPub) # add it to list of platform for game
+                
+                if developers:
+                    for fdeveloper in developers:
+                        developer = fdeveloper["developer"]
+                        dName = developer["name"]
+                        if not db.session.query(db.session.query(Developer).filter_by(name=pName).exists()).scalar(): # Add new developer if it does not exist
+                            newDev = Developer (  
+                                rawgid = developer["id"],
+                                name = developer["name"]
+                            )
+                            
+                            db.session.add(newDev)
+                            db.session.commit()
+
+                        currDev = Developer.query.filter_by(name=dName).one() # get the developer and
+                        g.developers.append(currDev) # add it to list of developers for game
                 
                 db.session.commit()
 
@@ -411,7 +592,7 @@ async def get_data(query:str="", pages:int = 3):
     async with aiohttp.ClientSession() as session:
         games = []
         for i in range(1, pages+1):
-            game_url = f"https://api.rawg.io/api/games?key=b2c75793dd4744eda9a6ed86652c0b16&search={utils.escape(query)}&page_size=50&page={i}"
+            game_url = f"https://api.rawg.io/api/games?key={os.environ['RAWG_KEY']}&search={utils.escape(query)}&page_size=50&page={i}"
              ## build up a collection of games
 
             games.append(asyncio.ensure_future(get_games(session, game_url)))
@@ -420,7 +601,9 @@ async def get_data(query:str="", pages:int = 3):
 
         await asyncio.gather(*games)
 
-async def get_game(session, url): 
+async def get_game(session, url):
+
     '''This is just to async retrieve additional game information'''
     async with session.get(url) as response:
         return await response.json()
+    

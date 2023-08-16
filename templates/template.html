@@ -28,7 +28,9 @@
             <div id="right-head">
                 <nav class="navbar navbar-expand-lg">
                     {{ render_nav_item('search_results', 'Search') }}
+                    {%if current_user.is_authenticated%}
                     {{ render_nav_item('home', 'Home') }}
+                    {%endif%}
                     {{ render_nav_item('games', 'Games') }}
                     {% if current_user.is_authenticated %}
                     <div class="dropdown">

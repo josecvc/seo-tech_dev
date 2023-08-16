@@ -1,0 +1,35 @@
+{%extends "user_page.html"%}
+
+{%block focus_title%}Game Page{%endblock%}
+{%block head%}<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">{%endblock%}
+{%block focus%}
+{%if sessions|length > 0%}
+<ul class="game-list">
+{% for session in sessions%}
+<li class="game-slot">
+    <div class="image-backdrop">
+        <img class="backdrop-pic" src="{{session.game.background}}">
+        <div class="part-blur">
+        </div>
+        
+    </div>
+    <div class="log-info">
+        <div class="game-title">
+            {{session.game.title}}
+        </div>
+        <div class="last_played">
+            <span class="play-date">Played on {{session.last_played.strftime("%d/%m/%Y %H:%M:%S")}}</span>
+        </div>
+        <div class="hours-played">
+            <span class="play-hours">Playtime: {%if session.time_played>=7200 %} {{session.time_played // 3600}} hours{%elif session.time_played >= 60%} {{session.time_played // 60 }} minutes{%else%}Less than a minute{%endif%}</span>
+        </div>
+    </div>
+    
+</li>
+{%endfor%}
+</ul>
+{%else%}
+<p>Play something man. Come on!</p>
+{%endif%}
+
+{%endblock%}

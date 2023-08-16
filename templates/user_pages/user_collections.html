@@ -1,0 +1,89 @@
+{%extends "user_page.html"%}
+{% from 'bootstrap5/form.html' import render_field %}
+{%block focus_title%}Collections{%endblock%}
+{%block head%}<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">{%endblock%}
+{%block focus%}
+
+<!-- 
+    We will use some javascript to open up a modal to create a collection
+    This will also mean that we will be able to use a modal to add games to the collection using a modal
+
+    Collections will be paginated
+
+
+    
+-->
+{%if user.id == current_user.id%}
+<button class="btn btn-secondary" id="create-popup">New Collection</button>
+{%endif%}
+{%if collections.total > 0%}
+<ul class="collection-list">
+{% for collection in collections.items%}
+    {%if not collection.public == False or (current_user.is_authenticated and current_user.id == user.id)%} <!-- Public collection or you're looking at your own collections -->
+    <li class="collection-slot">
+        <a href="collections/{{collection.id}}">
+            <div class="collecton-info">
+                <div class="collection-title">
+                    {{collection.name}}
+                </div>
+                <div class="collection-created">
+                    <span class="creation-date">Created {{collection.created.strftime("%d/%m/%Y")}}</span>
+                </div>
+                <div class="collection-updated">
+                    <span class="creation-date">Updated {{collection.updated.strftime("%d/%m/%Y")}}</span>
+                </div>
+            </div>
+        </a>
+    </li>
+    {%endif%}
+{%endfor%}
+</ul>
+
+<div class="pagination">
+    {% if collections.has_prev %}
+    <span>
+        <a class="page-number" href="//user/{[reqUser.username}}?page={{collections.prev_num}}">Back</a>
+    </span>
+    {%endif%}
+
+    {% for number in collections.iter_pages() %}
+        {% if collections.page != number %}
+            <span>
+                    <a class='page-number'
+                        href="/user/{[reqUser.username}}?page={{number}}">
+                    {{ number }}
+                    </a>
+            </span>
+        {% else %}
+            <span class='current-page-number'>{{ number }}</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if collections.has_next %}
+        <span>
+            <<a class="page-number" href="/user/{[reqUser.username}}?page={{collections.next_num}}">Next</a>
+        </span>
+{% endif %}
+</div>
+{%endif%}
+
+{% if current_user.is_authenticated and (current_user.id == user.id)%} <!-- Make sure that this modal is only available if logged in and this is your page -->
+<div id="modal">
+    <div id="modal-content" class="animate">
+        <h2>New Collection</h2>
+        <form method="POST" id="form" enctype=multipart/form-data>
+                {{ form.csrf_token() }}
+                {{render_field(form.collection_name)}}
+                {{render_field(form.collection_desc)}}
+                {{render_field(form.collection_boolean)}}
+            <input class="button-main" type="submit" value="Add"> <!-- Collection submit button-->
+        </form>
+    </div>
+</div>
+{%endif%}
+
+{%endblock%}
+
+{%block scripts%}
+<script src="{{url_for('static',filename='scripts/modal.js')}}"></script>
+{%endblock%}
