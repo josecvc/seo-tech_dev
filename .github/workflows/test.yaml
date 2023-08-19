@@ -15,8 +15,5 @@ jobs:
       - name: Install tools
         run: pip3 install -r requirements.txt
           
-      - name: Test webpages
-        run: python3 tests/test_basic.py
-
-      - name: Test registration form
-        run: python3 tests/test_users.py
+      - name: Test app
+        run: python3 test_flask.py
