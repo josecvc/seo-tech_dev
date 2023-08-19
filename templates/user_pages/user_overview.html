@@ -15,14 +15,16 @@
     </div>
     <div class="log-info">
         <div class="game-title">
-            {{session.game.title}}
+            <a class="game-link" href="/games/{{session.game.id}}">{% if session.is_currently_playing%}<b>Currently Playing:</b> {%endif%}{{session.game.title}}</a>
         </div>
+        {%if not session.is_currently_playing%}
         <div class="last_played">
             <span class="play-date">Played on {{session.last_played.strftime("%d/%m/%Y %H:%M:%S")}}</span>
         </div>
         <div class="hours-played">
             <span class="play-hours">Playtime: {%if session.time_played>=7200 %} {{session.time_played // 3600}} hours{%elif session.time_played >= 60%} {{session.time_played // 60 }} minutes{%else%}Less than a minute{%endif%}</span>
         </div>
+        {%endif%}
     </div>
     
 </li>

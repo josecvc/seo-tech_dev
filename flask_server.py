@@ -1,11 +1,15 @@
-from flask import Flask, redirect, render_template, request, url_for, Response, jsonify ,make_response
+from flask import Flask, redirect, render_template, request, url_for, Response, jsonify
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required, UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap5
-from datetime import datetime
-from forms import *
+from flask_apscheduler import APScheduler
 
+from datetime import datetime
+
+import requests
+from forms import *
 from keys import *
+
 import os
 import aiohttp
 import asyncio
@@ -16,21 +20,36 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from markupsafe import escape
 
+
 app = Flask(__name__, instance_relative_config=True)
+# app.config["SQLALCHEMY_DATABASE_URI"] =\
+#       "sqlite:///vgset.db"
+
+## For testing purposes
+app.config["TESTING"] = True
 app.config["SQLALCHEMY_DATABASE_URI"] =\
-      "sqlite:///vgset.db"
+      "sqlite:///"
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["SCHEDULER_API_ENABLED"] = True
+
 app.secret_key = "fjdkjfkJLdAKkKJD:FKLjkJFK"
 
 # Make database
 db = SQLAlchemy()
 db.init_app(app)
 
+# Make scheduler
+scheduler = APScheduler()
+scheduler.init_app(app)
+
+
+
 # Login
 login = LoginManager()
 login.init_app(app)
 login.login_view = "login"
-login.session_protection = "basic"
+login.session_protection = "disabled"
 
 # Bootstrap
 bootstrap=Bootstrap5(app)
@@ -40,14 +59,6 @@ def load_user(user_id):
     return User.query.get(user_id)
 
 # ----------- Foreign Relations
-
-# user_games = db.Table("user_games", # since many users can play many games (might turn this into a model)
-#                         db.Column("user_id", db.Integer, db.ForeignKey("user.id")),
-#                         db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
-#                         db.Column("hours_played", db.Integer),
-#                         db.Column("minutes_played", db.Integer),
-#                         db.Column("last_played", db.DateTime)
-#                         )
 
 game_genres = db.Table("game_genres", 
                         db.Column("game_id", db.Integer, db.ForeignKey("game.id")),
@@ -83,7 +94,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(16))
     create_date = db.Column(db.DateTime)
-
+    steam_id = db.Column(db.BigInteger) 
     def __repr__(self):
         return f"<User>: {self.username}"
     
@@ -188,20 +199,127 @@ class Frag(db.Model):
 
     time_played = db.Column(db.BigInteger)
     last_played = db.Column(db.DateTime)
-    
+    is_currently_playing = db.Column(db.Boolean)
+    temp_played = db.Column(db.BigInteger)
+
     user = db.relationship("User", backref="session")
     game = db.relationship("Game", backref="session")
 
     def __repr__(self):
         return f"<Frag {self.id}>: User ID: {self.user_id}; Game ID: {self.game_id}"
+    
+# ---------------------------- Scheduled Tasks
+@scheduler.task("interval", id="steam_check_currently_playing", seconds=3600)
+def steam_currently_playing():
+    with scheduler.app.app_context():
+        steam_users:list[User] = User.query.filter(User.steam_id.is_not(None)).all()
+        url = f"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={STEAM_API}&steamids=" + str({user.steam_id for user in steam_users})
+
+        resp = requests.get(url)
+        data = resp.json()
+
+        players:dict = data["response"]["players"]
+
+        for player in players:
+            if player["personastate"] != "0" and player["communityvisibilitystate"] != 1 : # if player is online and you can see their profile
+                try: # attempt to retrieve data about game
+                    user = User.query.filter_by(steam_id=player["steamid"]).one()
+                    """
+                    For each player, we need to first figure out if they are playing a game using a try except block.
+
+                    Then we need to get the game they are playing from the database, then query the database to see if they are playing a game already. 
+                    
+                    For playing games:
+                    - Check for gameplay
+                    - Get game name (if not privated)
+                    - Check for any currently played games. Stop that session.
+                    - Update that session.
+                    - Create a new session and put it as currently playing
+                    - Store a temporary variable in the database for a session to calculate the final timedelta
+                    - Commit everything
+
+                    If they are not playing a game:
+                    - Go to the database.
+                    - Find an active session.
+                    - Mark it as inactive.
+                    - If there is no active session, do nothing
+                    """
+                    
+                    game_title = player["gameextrainfo"] ## this is the name of the game they are playing (most of them closely match to the games in the database since RAWG is reputable)
+                    
+                    last_frag = Frag.query.filter_by(user_id = user.id).order_by(Frag.last_played.desc()).first()
+
+                    game = Game.query.filter_by(title=game_title).one()
+                    if game.id != last_frag.game_id or (game.id == last_frag.game_id and last_frag.is_currently_playing == False): # If you are not playing a game, or the game ids arent the same
+                        # get the time they've been playing
+                        time_now = datetime.now()
+                        url = f"http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key={STEAM_API}&steamid={player['steamid']}&format=json"
+                        
+                        resp = requests.get(url)
+                        data = resp.json()
+                        last_games = data["response"]["games"]
+
+                        last_game = {}
+                        for g in last_games:
+                            if g["name"] == game.title:
+                                last_game = g
+                        if not last_game:
+                            last_game["playtime_2weeks"] = 0
+
+                        user = User.query.filter_by(steam_id=player["steamid"]).one()
+
+                        # create the frag
+                        frag = Frag(
+                            user_id = user.id,
+                            game_id = game.id,
+                            time_played = 0,
+                            last_played = time_now,
+                            is_currently_playing = True,
+                            temp_played = last_game["playtime_2weeks"] * 60
+                        )
+                        db.session.add(frag)
+                        db.session.commit()
+                            
+                except KeyError: # meaning that the user is not playing anything or they have their steam account privated
+                    # go to database and check if a session is active
+                    if db.session.query(db.session.query(Frag).filter_by(is_currently_playing=True).\
+                                        filter_by(user_id=user.id).exists()).scalar(): # if an active session
+                        
+                        active_frag = Frag.query.filter_by(is_currently_playing=True).\
+                            filter_by(user_id = user.id).one()
+
+                        active_frag.is_currently_playing = False
+
+                        
+                        
+                        # get the game again to make the time delta
+
+                        url = f"http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key={STEAM_API}&steamid={player['steamid']}&format=json"
+
+                        resp = requests.get(url)
+                        data = resp.json()
+                        last_games = data["response"]["games"]
+                        last_game = None
+                        for g in last_games:
+                            if g["name"] == active_frag.game.title:
+                                last_game = g
+                        active_frag.time_played = (last_game["playtime_2weeks"] * 60) - active_frag.temp_played
+
+                        db.session.commit()
+                    
+scheduler.start() 
+
 # ---------------------------- Auth Routes
+@app.route("/test/")
+def test():
+    return jsonify(success=True)
 
 @app.errorhandler(404)
 def error404(e):
     '''Everything that doesn't exist/you're not supposed to go to is 404'''
     return render_template('e404.html'), 404
 
-@app.route("/login", methods=["POST", "GET"])
+@app.route("/login/", methods=["POST", "GET"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("home"))
@@ -223,7 +341,7 @@ def logout():
     logout_user() # just log them out.
     return redirect(url_for("login"))
 
-@app.route("/register", methods=["POST", "GET"])
+@app.route("/register/", methods=["POST", "GET"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("home"))
@@ -244,15 +362,15 @@ def register():
             db.session.commit()
 
             requestedUser = User.query.filter_by(username=register_form.username.data).one()
-            login_user(requestedUser)
-            return redirect(url_for("home"))
+            # login_user(requestedUser)
+            return redirect(url_for("login"))
 
     return render_template("register.html", form=register_form)
 
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def account_settings():
-    return
+    return render_template("user_pages/account_settings.html")
 
 # ------------ Main Routes
 
@@ -264,13 +382,12 @@ def landing():
     return render_template("landing.html")
 
 
-@app.route("/home", methods=["POST", "GET"])
+@app.route("/home/", methods=["POST", "GET"])
 @login_required
 def home():
-    
     return render_template("home.html")
 
-@app.route("/games", methods=["POST", "GET"])
+@app.route("/games/", methods=["POST", "GET"])
 def games():
     ## this is going to be a series of queries
     # newly released games
@@ -278,9 +395,10 @@ def games():
     # most popular games of all time
     # most trending games
     # popular genres
+
     return render_template("games.html")
 
-@app.route("/games/<int:game_id>/", methods=["POST", "GET"])
+@app.route("/games/<int:game_id>/", methods=["POST", "GET"]) 
 def game_page(game_id:int):
     if not db.session.query(db.session.query(Game).filter_by(id=game_id).exists()).scalar(): # if the game is not in the database
         return render_template("e404.html"), 404
@@ -308,7 +426,7 @@ def game_page(game_id:int):
     
     return render_template("self_game.html", game=game, rating_form=rating_form, ratings=ratings, collections = real_collections, all_frags = total_sessions)
 
-@app.route("/user/<string:username>", methods=["POST", "GET"])
+@app.route("/user/<string:username>/", methods=["POST", "GET"])
 def user_page(username:str):
     try:
         reqUser = User.query.filter_by(username=username).one()
@@ -343,7 +461,7 @@ def user_library(username:str):
 
         return render_template("user_pages/user_library.html", user = reqUser, sessions = sessions, frag_form = f_form, search_form = s_form)
 
-@app.route("/user/<string:username>/collections", methods=["POST", "GET"])
+@app.route("/user/<string:username>/collections/", methods=["POST", "GET"])
 def user_collections(username:str):
     try:
         reqUser = User.query.filter_by(username=username).one()
@@ -376,7 +494,17 @@ def user_collections(username:str):
         collections = db.paginate(Collection.query.filter_by(user_id = reqUser.id))
         return render_template("user_pages/user_collections.html", user = reqUser, collections = collections, form=form)
 
-@app.route("/user/<string:username>/collections/<int:collection_id>", methods=["POST", "GET"])
+@app.route("/user/<string:username>/ratings")
+def user_ratings(username:str):
+    try:
+        reqUser = User.query.filter_by(username=username).one()
+    except:
+        return render_template("e404.html"), 404
+    else:
+        user_ratings = Rating.query.filter_by(user_id=reqUser.id)
+        return render_template("user_pages/user_ratings.html", user = reqUser, ratings=user_ratings)
+
+@app.route("/user/<string:username>/collections/<int:collection_id>/", methods=["POST", "GET"])
 def self_collection(username:str, collection_id:str):
     ## Each collection will have games which you can call with collection.games.
     try:
@@ -414,16 +542,17 @@ async def search_results():
        return render_template("search_results.html", query=None)
 
 @app.post("/addtocollection")
+@login_required
 def add_to_collection():
     requested = request.get_json()
-    print(requested)
     collection:Collection = Collection.query.get(int(requested["collection_id"]))
     game:Game = Game.query.get(int(requested["game_id"]))
     collection.games.append(game)
     db.session.commit()
-    return Response(status=302)
+    return Response(status=201)
 
 @app.get("/suggestgames")
+@login_required
 def suggest_games():
     query = request.args["q"]
     filter = Game.query.filter(Game.title.contains(query)).limit(30).all()
@@ -435,7 +564,6 @@ def suggest_games():
             "background": game.background,
         })
     return jsonify(games)
-
 
 @app.post("/addfrag")
 @login_required
@@ -471,9 +599,10 @@ def add_frag():
     db.session.commit()
 
     return Response(status=201)
+
 @app.post("/addrating")
+@login_required
 def add_rating():
-    print("we're here")
     rating_block = request.get_json()
     ## first check if the person has already reviewed the game
     if not db.session.query(db.session.query(Rating).filter_by(game_id=rating_block["game_id"]).\
@@ -500,6 +629,23 @@ def add_rating():
 
     return Response(status=201)
 
+@app.route("/steam_login", methods=["GET", "POST"])
+@login_required
+def steam_ok(): 
+    try:
+        # add steam_id to user
+        user_steam_id = int(request.args["openid.identity"].replace("https://steamcommunity.com/openid/id/", "")) # retrieve steam id
+        current_user.steam_id = user_steam_id
+        db.session.commit()
+        ## redirect to settings page
+        return redirect(url_for("account_settings"))
+    except KeyError: 
+        return render_template("e404.html"), 404
+
+@app.route("/remove_app", methods=["GET", "POST"])
+def remove_app():
+    pass
+
 async def get_games(session, url):
     '''Used to turn a game JSON into a Game object'''
     async with session.get(url) as resp:
@@ -509,17 +655,22 @@ async def get_games(session, url):
             real_g = g_json["results"]
             ## then go through the list and convert into Game objects
             for game in real_g: # returns the value for each key
+                if game["added"] < 5 or "(itch)" in game["name"].lower(): # filter out fluff (lol)
+                    break
+
                 genres = game["genres"] ## get genres, now we need to check which ones are in the database
                 platforms = game["platforms"]
-                publishers = game["publishers"]
-                developers = game["developers"]
+                
 
-                data = await get_game(session, f"https://api.rawg.io/api/games/{game['id']}?key={os.environ['RAWG_KEY']}") # get some additional information for the game
+                data = await get_game(session, f"https://api.rawg.io/api/games/{game['id']}?key={RAWG_KEY}") # get some additional information for the game
 
                 if game["released"]:
                     releaseDate = datetime.strptime(game["released"], "%Y-%m-%d").date()
                 else:
                     releaseDate = None
+
+                publishers = data["publishers"]
+                developers = data["developers"]
 
                 if not db.session.query(db.session.query(Game).filter_by(title=game["name"]).exists()).scalar(): # if the game is not in the database 
                     newGame = Game(
@@ -552,12 +703,27 @@ async def get_games(session, url):
 
                         currGenre = Genre.query.filter_by(name=grName).one() # get the genre and
                         g.genres.append(currGenre) # add it to list of genres for game
+                
+                if platforms:
+                    for platform in platforms:
+                        p = platform["platform"]
+                        pName = p["name"]
+                        if not db.session.query(db.session.query(Platform).filter_by(name=pName).exists()).scalar(): # Add new platform if it does not exist
+                            newPlat = Platform (  
+                                rawgid = p["id"],
+                                name = pName
+                            )
+                            
+                            db.session.add(newPlat)
+                            db.session.commit()
+
+                        currPlat = Platform.query.filter_by(name=pName).one() # get the platforms and
+                        g.platforms.append(currPlat) # add it to list of platforms for game
                 if publishers:
-                    for fpublisher in publishers:
-                        publisher = fpublisher["publisher"]
+                    for publisher in publishers:
                         pName = publisher["name"]
                         if not db.session.query(db.session.query(Publisher).filter_by(name=pName).exists()).scalar(): # Add new platform if it does not exist
-                            newPub = Platform (  
+                            newPub = Publisher (  
                                 rawgid = publisher["id"],
                                 name = publisher["name"]
                             )
@@ -569,21 +735,20 @@ async def get_games(session, url):
                         g.publishers.append(currPub) # add it to list of platform for game
                 
                 if developers:
-                    for fdeveloper in developers:
-                        developer = fdeveloper["developer"]
+                    for developer in developers:
                         dName = developer["name"]
-                        if not db.session.query(db.session.query(Developer).filter_by(name=pName).exists()).scalar(): # Add new developer if it does not exist
+                        if not db.session.query(db.session.query(Developer).filter_by(name=dName).exists()).scalar(): # Add new developer if it does not exist
                             newDev = Developer (  
                                 rawgid = developer["id"],
                                 name = developer["name"]
                             )
-                            
+                             
                             db.session.add(newDev)
                             db.session.commit()
 
                         currDev = Developer.query.filter_by(name=dName).one() # get the developer and
                         g.developers.append(currDev) # add it to list of developers for game
-                
+
                 db.session.commit()
 
 
@@ -592,7 +757,7 @@ async def get_data(query:str="", pages:int = 3):
     async with aiohttp.ClientSession() as session:
         games = []
         for i in range(1, pages+1):
-            game_url = f"https://api.rawg.io/api/games?key={os.environ['RAWG_KEY']}&search={utils.escape(query)}&page_size=50&page={i}"
+            game_url = f"https://api.rawg.io/api/games?key={RAWG_KEY}&search={utils.escape(query)}&page_size=50&page={i}"
              ## build up a collection of games
 
             games.append(asyncio.ensure_future(get_games(session, game_url)))
@@ -607,3 +772,4 @@ async def get_game(session, url):
     async with session.get(url) as response:
         return await response.json()
     
+

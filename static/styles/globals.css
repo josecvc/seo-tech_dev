@@ -233,3 +233,12 @@ main {
     justify-content: center;
     padding-top: 10px;
 }
+
+a {
+    color: white;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

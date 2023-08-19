@@ -1,0 +1,9 @@
+{%extends "user_page.html"%}
+
+{%block focus_title%}Game Page{%endblock%}
+{%block head%}<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">{%endblock%}
+{%block focus%}
+{%for rating in ratings%}
+{{rating}}
+{%endfor%}
+{%endblock%}

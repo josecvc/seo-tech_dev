@@ -25,18 +25,30 @@
     z-index: 2;
     /* top: 40%; */
     width: 100%;
-    background-color: rgb(61, 57, 57);;
+    background-color: rgb(61, 57, 57);
     height: 100%;
     color:white;
 }
 
 .user-stats {
 	display: inline-block;
+	position:relative;
 	border-radius: 10px;
     padding: 10px;
-	padding-left: 0px;
     background-color: rgb(48, 44, 44);
-	width: 100%;
+}
+
+.genre, .platform, .developer, .publisher {
+	border-radius: 10px;
+	padding:5px;
+	background-color: rgb(42, 39, 39);
+	position: relative;
+	display: inline-block;
+}
+
+.genre-list, .platform-list, .publisher-list, .dev-list {
+	list-style: none;
+	padding-left: 0px;
 }
 
 @media only screen and (max-width: 600px) {
@@ -133,4 +145,10 @@ textarea {
 	background: var(--light);
 }
 
+.rating-detail {
+	border-radius: 5px;
+	padding: 5px;
+	background-color: rgb(42, 39, 39);
+	display: inline-block;
+}
 

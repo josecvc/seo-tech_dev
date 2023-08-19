@@ -1,5 +1,7 @@
 {%extends "template.html"%}
 {% from 'bootstrap5/form.html' import render_field %}
+{% from "rating_macro.html" import generate_rating %}
+
 {%block title%}{{game.title}} | Vidya!{%endblock%}
 {%block head%}
 <link type="text/css" rel="stylesheet" href="{{url_for('static',filename='styles/self-game.css')}}">
@@ -20,10 +22,34 @@
         <h1 class="game-title">{{game.title}}</h1>
         {%if current_user.is_authenticated%}
         <div class="user-stats">
-            Your plays: {{self_frags|length}} &#8226; Total playtime: {%if self_frags|sum(attribute="time_played") >= 7200 %}{{(self_frags|sum(attribute="time_played") // 3600)|round}} hours{%elif self_frags|sum(attribute="time_played") >= 60%}{{(self_frags|sum(attribute="time_played") // 60)|round}} minutes {%else%} Less than a minute played{%endif%}
+            Your plays: {{self_frags|length}} &#8226; Total playtime: {%if self_frags|sum(attribute="time_played") >= 7200 %}{{(self_frags|sum(attribute="time_played") // 3600)|round}} hours{%elif self_frags|sum(attribute="time_played") >= 60%}{{(self_frags|sum(attribute="time_played") // 60)|round}} minutes {%elif self_frags %} Less than a minute played{%else%}Never played{%endif%}
         </div>
         {%endif%}
         <div class="game-desc">{{game.desc | safe}}</div>
+
+        <div class="publisher-container">
+            <h2>Publishers</h2>
+            <ul class="publisher-list">
+                {%for publisher in game.publishers%}
+                <li class="publisher">{{publisher.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+        
+        <div class="release-date-container">
+            <h2>Release Date</h2>
+            <p>{{game.released.strftime("%d %B %Y")}}</p>
+        </div>
+        
+        <div class="dev-container">
+            <h2>Developers</h2>
+            <ul class="dev-list">
+                {%for dev in game.developers%}
+                <li class="developer">{{dev.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+
         <div class="genre-container">
             <h2>Genres</h2>
             <ul class="genre-list">
@@ -76,7 +102,7 @@
                                 </span>
                                 
                                 <span class="rating-meter">
-                                    {{rating.rating}}
+                                    {{ generate_rating(rating.rating) }}
                                 </span>
                                 {%if rating.review%}
                                 <p>{{rating.review}}</p>
@@ -109,17 +135,16 @@
                 {% for rating in ratings %}
                 {% if rating.user_id != current_user.id %}
                     <li class="rating-detail">
-                        <span class="rating-unique">
-                            <span class="rating-username">{{rating.user.username}}</span>
-                            <span class="rating-time">{{rating.timestamp.strftime("%d %B %Y")}}</span>
-                        </span>
-                        
                         <span class="rating-meter">
-                            {{rating.rating}}
+                            {{ generate_rating(rating.rating) }}
                         </span>
                         {%if rating.review%}
                         <p>{{rating.review}}</p>
                         {%endif%}
+                        <span class="rating-unique">
+                            <span class="rating-username">{{rating.user.username}}</span>
+                            <span class="rating-time">{{rating.timestamp.strftime("%d %B %Y")}}</span>
+                        </span>
                     </li>
                 {%endif%}
                 {%endfor%}

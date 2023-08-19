@@ -1,0 +1,27 @@
+{%extends "template.html"%}
+
+{%block title%}Account Settings | Vidya!{%endblock%}
+
+{%block content%}
+<div class="center-container">
+    <div class="steam-login-component">
+        {%if not current_user.steam_id %}
+        <form action="https://steamcommunity.com/openid/login" method="post">
+            <input type="hidden" name="openid.identity"
+                   value="http://specs.openid.net/auth/2.0/identifier_select" />
+            <input type="hidden" name="openid.claimed_id"
+                   value="http://specs.openid.net/auth/2.0/identifier_select" />
+            <input type="hidden" name="openid.ns" value="http://specs.openid.net/auth/2.0" />
+            <input type="hidden" name="openid.mode" value="checkid_setup" />
+            <input type="hidden" name="openid.realm" value="https://127.0.0.1/steam_login" />
+            <input type="hidden" name="openid.return_to" value="https://127.0.0.1/steam_login" />
+            <button class="btn btn-secondary" type="submit">Log in through Steam</button>
+        </form>
+        {% else %}
+        <button class="btn btn-secondary" disabled>Logged in with Steam</button>
+        {% endif %}
+
+    </div>
+    
+</div>
+{%endblock%}

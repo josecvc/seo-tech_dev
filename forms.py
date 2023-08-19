@@ -1,6 +1,5 @@
-from wtforms import Form, StringField, PasswordField, validators, IntegerField, TextAreaField, DateField, TimeField, EmailField, ValidationError, BooleanField, HiddenField, SelectField
+from wtforms import StringField, PasswordField, validators, IntegerField, TextAreaField, DateField, TimeField, EmailField, ValidationError, BooleanField, SelectField
 from flask_wtf import FlaskForm 
-from flask_wtf.file import FileField, FileAllowed, FileRequired
 
 class RegisterForm(FlaskForm):
     username = StringField("Username", [

@@ -1,5 +1,13 @@
 @import "modal.css";
 
+.left-nav {
+    margin-left: 0px;
+}
+.username {
+    font-weight:bold;
+    font-size: xx-large;
+}
+
 .game-list {
     display: flex;
     flex-direction: column;
@@ -15,6 +23,7 @@
 
 .image-backdrop {
     height: 100%;
+    width: 100%;
     z-index: 1;
     overflow: hidden;
     background: transparent no-repeat center;
@@ -76,4 +85,12 @@
     width:100%;
     overflow-y: hidden;
     margin: 10px;
+}
+
+.game-title {
+    font-size: x-large;
+}
+
+.game-link {
+    font-weight: 400;
 }
