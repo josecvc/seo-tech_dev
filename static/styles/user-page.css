@@ -1,0 +1,169 @@
+@import "modal.css";
+
+.horz-scroll  {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.left-nav {
+    margin-left: 0px;
+}
+.username {
+    font-weight:bold;
+    font-size: xx-large;
+}
+
+.game-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.game-slot, .collection-slot {
+    display:flex;
+    height:150px;
+    list-style: none;
+    float: left;
+    padding:10px;
+}
+
+.image-backdrop {
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background: transparent no-repeat center;
+    background-size: cover;
+}
+
+.log-info {
+    margin-top: 5px;
+    margin-left: 5px;
+    position: absolute;
+    z-index: 4;
+}
+
+.part-blur {
+    background: rgba(50, 70, 80, 0.7);
+    overflow: hidden;
+    height: 100%;
+}
+
+.backdrop-pic {
+    width:100%;
+    height:auto;
+    overflow: hidden;
+    opacity: 0.5;
+    filter:  invert(0%) sepia(6%) saturate(1%) hue-rotate(285deg) brightness(50%);
+}
+
+#suggest-results {
+    height: 300px;
+    background-color: white;
+    margin: 0 auto;
+    margin:5px;
+    border-radius: 10px;
+    color:black;
+    overflow-y: scroll !important;
+}
+
+#suggest-focus {
+    height: 100%;
+    /* background-color: white; */
+    margin: 0 auto;
+    margin:5px;
+    border-radius: 10px;
+    color:black;
+}
+
+.game-card {
+    margin-top: 10px;
+    height:100px;
+    margin-bottom: 10px;
+    position:relative;
+    font-size: x-large;
+}
+
+.form-split {
+    display: flex;
+    flex-direction: row;
+}
+
+.form-left-split, .form-right-split {
+    width:100%;
+    overflow-y: hidden;
+    margin: 10px;
+}
+
+.game-title {
+    font-size: x-large;
+}
+
+.game-link {
+    font-weight: 400;
+}
+
+.top-identifier {
+    font-weight: 600;
+    display: block;
+    max-width: fit-content;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    padding: 5px;
+    z-index: -1;
+    font-size: x-small;
+    text-align: center;
+    margin: 0px;
+}
+
+.first-game {
+    padding: 0px;
+    margin: 10px 0px;
+    margin-top: 0px;
+}
+
+.other-top-game {
+    border-color: black;
+    border-width: 10px;
+    height:fit-content;
+}
+
+.top-genre-list{
+    display: flex;
+    flex-flow: row;
+    padding-left: 0px;
+}
+
+.genre-slot {
+    position: relative;
+    display:inline-flex;
+    list-style: none;
+    margin: 0px 5px 0px;
+    padding: 10px;
+    background-color: rgba(50, 70, 80, 0.7);
+    border-radius: 10px;
+    font-size:larger;
+}
+
+.collection-slot {
+    background-color: rgb(34, 31, 31);
+    height:unset;
+    transition: background-color 0.5s;
+    border-radius: 10px;
+    margin:10px;
+}
+
+.collection-link:hover {
+    text-decoration: none;
+}
+
+.collection-slot:hover {
+    background-color: rgb(91, 86, 86);
+}
+
+.collection-list {
+    display: flex;
+    flex-flow: row wrap;
+    padding-left: 0px;
+}

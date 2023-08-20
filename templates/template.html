@@ -1,0 +1,73 @@
+{% from 'bootstrap4/nav.html' import render_nav_item %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- BEGIN FONTS -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Handjet:wght@100;200;300;400;500;600;700;800;900&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+     <!-- END FONTS  -->
+
+    <!-- BEGIN STYLES -->    
+    {{ bootstrap.load_css() }}
+    <link type="text/css" rel="stylesheet" href="{{url_for('static',filename='styles/globals.css')}}">
+    <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
+    <!-- END STYLES -->
+    {%block head%}{%endblock%} <!-- This is for page CSS -->
+    <title>{%block title%}{%endblock%}</title>
+</head>
+<body>
+    <main>
+        <div id="main-header">
+            <div id="gapping"></div>
+            <div id="center-head">
+                <a href="/" id="web-title">VIDYA</a>
+            </div>
+            <div id="right-head">
+                <nav class="navbar navbar-expand-lg">
+                    {{ render_nav_item('search_results', 'Search') }}
+                    {%if current_user.is_authenticated%}
+                    {{ render_nav_item('home', 'Home') }}
+                    {%endif%}
+                    {{ render_nav_item('games', 'Games') }}
+                    {% if current_user.is_authenticated %}
+                    <div class="dropdown">
+                        <a class="nav-item dropdown-toggle" style="color:white; text-decoration: none; " type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Account
+                        </a>
+                        
+                            
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                            <li><a class="dropdown-item" href="/user/{{current_user.username}}">My Profile</a></li>
+                            <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </div>
+                    {%else%}
+                    {{ render_nav_item('login', 'Login') }}
+                    {{ render_nav_item('register', 'Sign Up') }}
+                    {%endif%}
+                  </nav>
+            </div>
+        </div>
+        <div id="content-wrapper">
+            <div id="main-container">
+                {%block content%}
+
+                {%endblock%}
+            </div>
+        </div>
+        <footer class="footer">
+            <span>&#169; The NERV Project</span>
+        </footer>
+    </main>
+    {{ bootstrap.load_js() }}
+
+    {%block scripts%} <!-- This is for page scripts -->
+
+    {%endblock%}
+</body>
+</html>

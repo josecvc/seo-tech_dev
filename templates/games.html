@@ -1,0 +1,67 @@
+{%extends "template.html"%}
+
+{%block title%}Games | Vidya!{%endblock%}
+{%block head%} <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='styles/games.css')}}"> {%endblock%}
+{%block content%}
+<div class="center-container">
+    <h2>Top games this month</h2>
+    <ul class="game-list">
+        {%for game, count, times in top_games_month%}
+        <li class="game-slot" >
+            <div class="image-backdrop">
+                <img class="backdrop-pic" src="{{game.background}}">
+                <div class="part-blur">
+                </div>
+                
+            </div>
+            <div class="info">
+                <div class="game-title">
+                    <a class="game-link" href="/games/{{game.id}}">{{game.title}}</a>  
+                </div>
+            </div>
+            
+        </li>
+        {%endfor%}
+    </ul>
+
+    <h2>Newly released games</h2>
+    <ul class="game-list">
+        {%for game in new_games%}
+        <li class="game-slot" >
+            <div class="image-backdrop">
+                <img class="backdrop-pic" src="{{game.background}}">
+                <div class="part-blur">
+                </div>
+                
+            </div>
+            <div class="info">
+                <div class="game-title">
+                    <a class="game-link" href="/games/{{game.id}}">{{game.title}}</a>  
+                </div>
+            </div>
+            
+        </li>
+        {%endfor%}
+    </ul>
+
+    <div class="top-genres">
+        <h2>Top Genres</h2>
+        <ul class="top-genre-list horz-scroll">
+            {% for genre, count, times in top_genres_month %}
+            <li class="genre-slot" {%if loop.index == 1%}style="margin-left:0px;"{%elif not loop.nextitem%}style="margin-right:0px;" {%endif%}>
+                <div class="genre-info">
+                    <div class="genre-title">
+                        <span>{{genre.name}}</span>
+                    </div>
+                </div>
+            </li>
+            {%endfor%}
+        </ul>
+    </div>
+</div>
+{%endblock%}
+
+
+
+{%block scripts%}
+{%endblock%}

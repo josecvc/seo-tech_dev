@@ -1,0 +1,27 @@
+{% macro generate_rating(rating) %}
+    <i class='bx bxs-star star active' style="--i: 0;"></i>
+
+    {% if rating >= 2 %}
+    <i class='bx bxs-star star active' style="--i: 1;"></i>
+    {%else%}
+    <i class='bx bx-star star' style="--i: 1;"></i>
+    {% endif %}
+
+    {% if rating >= 3 %}
+    <i class='bx bxs-star star active' style="--i: 2;"></i>
+    {%else%}
+    <i class='bx bx-star star' style="--i: 2;"></i>
+    {% endif %}
+
+    {% if rating >= 4 %}
+    <i class='bx bxs-star star active' style="--i: 3;"></i>
+    {%else%}
+    <i class='bx bx-star star' style="--i: 3;"></i>
+    {% endif %}
+
+    {% if rating == 5 %}
+    <i class='bx bxs-star star active' style="--i: 4;"></i>
+    {%else%}
+    <i class='bx bx-star star' style="--i: 4;"></i>
+    {% endif %}
+{% endmacro %}

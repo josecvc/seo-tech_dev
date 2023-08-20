@@ -1,0 +1,61 @@
+.horz-scroll  {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.recent-list, .top-list, .recent-collections {
+    display: flex;
+    flex-flow: row;
+    padding-left: 0px;
+}
+
+.recent-game-slot, .top-game-slot, .collection-slot {
+    position: relative;
+    display:inline-flex;
+    height:200px;
+    list-style: none;
+    margin: 0px 10px 0px;
+    padding-left: 0px;
+}
+
+.image-backdrop, .image-backdrop-collage {
+    height:100%;
+    width: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background: transparent no-repeat center;
+    background-size: cover;
+}
+
+.log-info, .collection-info {
+    position: absolute;
+    z-index: 4;
+    /* word-break:break-all; */
+    /* white-space: pre-line; */
+}
+
+.part-blur {
+    background: rgba(50, 70, 80, 0.7);
+    overflow: hidden;
+    height: 100%;
+}
+
+.backdrop-pic {
+    width: auto;
+    height: 100%;
+    overflow: hidden;
+    opacity: 0.5;
+    filter:  invert(0%) sepia(6%) saturate(1%) hue-rotate(285deg) brightness(50%);
+}
+
+.game-title, .collection-title {
+    font-weight: bold;
+}
+
+.collection-slot {
+    background-color: rgb(255, 224, 224);
+    /* display: inline; */
+    width: 355.55px;
+}

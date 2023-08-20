@@ -1,0 +1,30 @@
+{%extends "user_page.html"%}
+{% from "rating_macro.html" import generate_rating %}
+
+{%block focus_title%}Ratings{%endblock%}
+{%block head%}
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/self-game.css')}}">
+{%endblock%}
+{%block focus%}
+{% if ratings|length > 0%}
+<ul class="rating-list">
+    {% for rating in ratings %}
+        <li class="rating-detail">
+            <a href="/game/{{rating.game_id}}"><b>{{rating.game.title}}</b></a> &#8226; 
+            <span class="rating-meter">
+                {{ generate_rating(rating.rating) }}
+            </span>
+            {%if rating.review%}
+            <p>{{rating.review}}</p>
+            {%endif%}
+            <span class="rating-unique">
+                <span class="rating-time">{{rating.timestamp.strftime("%d %B %Y")}}</span>
+            </span>
+        </li>
+    {%endfor%}
+</ul>
+{%else%}
+<span>No ratings...</span>
+{%endif%}
+{%endblock%}

@@ -1,0 +1,19 @@
+{% extends "template.html" %}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{%block title%}Login | Vidya!{%endblock%} 
+{%block content%}
+    <div class="center-container">
+        <form method="POST" enctype=multipart/form-data>
+        {{ form.csrf_token() }}
+        {{ render_field(form.username) }}
+        {{ render_field(form.password) }}
+        <input type="submit" value="Login" class="btn btn-primary"/>
+        </form>
+        <span id="link-background">New here? <a id="alternative-choice" href="/register">Register Here</a></span>
+    </div>
+    
+{%endblock%}
+
+{%block scripts%}
+{%endblock%}

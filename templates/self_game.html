@@ -1,0 +1,169 @@
+{%extends "template.html"%}
+{% from 'bootstrap5/form.html' import render_field %}
+{% from "rating_macro.html" import generate_rating %}
+
+{%block title%}{{game.title}} | Vidya!{%endblock%}
+{%block head%}
+<link type="text/css" rel="stylesheet" href="{{url_for('static',filename='styles/self-game.css')}}">
+
+{%endblock%}
+
+{%block content%}
+<!-- There will be two parts: One part is the banner, another part is the actual information for the game. When scrolling upwards, you will no longer see the banner -->
+
+<!-- This will act as a banner for the game -->
+<div id="game-bg-container">
+    <div class="blur"></div>
+    <img id="game-bg" src="{{game.background}}">
+</div>
+
+<div class="game-info-container">
+    <div class="center-container">
+        <h1 class="game-title">{{game.title}}</h1>
+        {%if current_user.is_authenticated%}
+        <div class="user-stats">
+            Your plays: {{self_frags|length}} &#8226; Total playtime: {%if self_frags|sum(attribute="time_played") >= 7200 %}{{(self_frags|sum(attribute="time_played") // 3600)|round}} hours{%elif self_frags|sum(attribute="time_played") >= 60%}{{(self_frags|sum(attribute="time_played") // 60)|round}} minutes {%elif self_frags %} Less than a minute played{%else%}Never played{%endif%}
+        </div>
+        {%endif%}
+        <div class="game-desc">{{game.desc | safe}}</div>
+
+        <div class="publisher-container">
+            <h2>Publishers</h2>
+            <ul class="publisher-list">
+                {%for publisher in game.publishers%}
+                <li class="publisher">{{publisher.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+        
+        <div class="release-date-container">
+            <h2>Release Date</h2>
+            <p>{{game.released.strftime("%d %B %Y")}}</p>
+        </div>
+        
+        <div class="dev-container">
+            <h2>Developers</h2>
+            <ul class="dev-list">
+                {%for dev in game.developers%}
+                <li class="developer">{{dev.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+
+        <div class="genre-container">
+            <h2>Genres</h2>
+            <ul class="genre-list">
+                {%for genre in game.genres%}
+                <li class="genre">{{genre.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+
+        <div class="platform-container">
+            <h2>Platforms</h2>
+            <ul class="platform-list">
+                {%for platform in game.platforms%}
+                <li class="platform">{{platform.name}}</li>
+                {%endfor%}
+            </ul>
+        </div>
+        <div class="collections-container">
+            <h2>Collections</h2>
+            {%if collections|length > 0%}
+            <ul class="collection-list">
+                
+                    {%for collection in collections%}
+                    {%if collection[0].public == True%}
+                    <li class="collection">
+                        <a href="/user/{{collection[1].username}}/collections/{{collection[0].id}}">
+                        <span class="collection-title">{{collection[0].name}}</span> by <span class="collection-username">{{collection[1].username}}</span> 
+                        </a>
+                    </li>
+                    {%endif%}
+                    {%endfor%}
+                
+            </ul>
+            {%else%}
+                <span>No collections yet...</span>
+                {%endif%}
+        </div>
+        <div class="ratings-container">
+            <h2>Ratings</h2>
+            {%if current_user.is_authenticated%}
+                <div class="self-rating-block">
+                    {%for rating in ratings%}
+                        {%if rating.user_id == current_user.id%}
+                        <h4>Your Rating</h4>
+                        <div class="self-rating">
+                            <div class="rating-detail">
+                                <span class="rating-unique">
+                                    <span class="rating-username">{{rating.user.username}}</span>
+                                    <span class="rating-time">{{rating.timestamp.strftime("%d %B %Y")}}</span>
+                                </span>
+                                
+                                <span class="rating-meter">
+                                    {{ generate_rating(rating.rating) }}
+                                </span>
+                                {%if rating.review%}
+                                <p>{{rating.review}}</p>
+                                {%endif%}
+                            </div>
+                        </div>
+                        {%endif%}
+                    {%endfor%}
+                
+                
+                <form method="POST" id="rating-form" enctype=multipart/form-data>
+                    {{rating_form.csrf_token}}
+                    <div class="rating">
+                        <input type="hidden" name="rating" value="-1" id="rating-value"> <!-- Value initially -1 so we know that the user has not rated yet -->
+                        <i class='bx bx-star star' style="--i: 0;"></i>
+                        <i class='bx bx-star star' style="--i: 1;"></i>
+                        <i class='bx bx-star star' style="--i: 2;"></i>
+                        <i class='bx bx-star star' style="--i: 3;"></i>
+                        <i class='bx bx-star star' style="--i: 4;"></i>
+                    </div>
+                    {{render_field(rating_form.review)}}
+                    <input type="submit" value="Add Review">
+                </form>
+            </div>
+            {%endif%}
+            {% if ratings|length > 0%}
+            <span class="rating-average">{{ratings|sum(attribute="rating") / ratings|length}} average based on {{ratings|length}} review{%if ratings|length > 1%}s{%endif%}.</span>
+
+            <ul class="rating-list">
+                {% for rating in ratings %}
+                {% if rating.user_id != current_user.id %}
+                    <li class="rating-detail">
+                        <span class="rating-meter">
+                            {{ generate_rating(rating.rating) }}
+                        </span>
+                        {%if rating.review%}
+                        <p>{{rating.review}}</p>
+                        {%endif%}
+                        <span class="rating-unique">
+                            <span class="rating-username">{{rating.user.username}}</span>
+                            <span class="rating-time">{{rating.timestamp.strftime("%d %B %Y")}}</span>
+                        </span>
+                    </li>
+                {%endif%}
+                {%endfor%}
+            </ul>
+            {%else%}
+            <span>No ratings...</span>
+            {%endif%}
+        </div>
+
+    </div>
+
+    
+</div>
+<input type="hidden" id="hidden_game_id" value="{{game.id}}">
+
+{%endblock%}
+
+{%block scripts%}
+
+<script src="{{url_for('static',filename='scripts/game-rating.js')}}"></script>
+
+{%endblock%}

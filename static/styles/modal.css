@@ -1,0 +1,87 @@
+/* This is literally just so I dont have to rewrite the modal every time */
+
+#modal {
+    display: none; 
+    position: fixed; 
+    z-index: 9993; 
+    padding-top: 5%;
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%;
+    max-height: 100%; 
+    overflow: auto; 
+    background-color: rgb(0,0,0); 
+    background-color: rgba(0,0,0,0.8); 
+}
+
+#modal-content {
+    /* position: sticky;
+    top: 0; */
+    font-weight: 200;
+    background-color: rgb(61, 57, 57);
+    /* width: 40%; */
+    max-width: 50%;
+    padding: 10px;
+    border-radius: 10px;
+    margin: auto auto auto auto;
+    /* overflow: auto; */
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+#modal-verif {
+    display: none; 
+    position: fixed; 
+    z-index: 1; 
+    padding-top: 5%;
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgb(0,0,0); 
+    background-color: rgba(0,0,0,0.8); 
+}
+
+#modal-content-verif {
+    position: sticky;
+    top: 0;
+    font-weight: 200;
+    background-color: rgba(168, 194, 231, 0.6);
+    /* width: 40%; */
+    max-width: 50%;
+    padding: 10px;
+    border-radius: 10px;
+    margin: auto auto auto auto;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+#modal-ticket {
+    position: sticky;
+    top: 0;
+    font-weight: 200;
+    background-color: rgba(168, 194, 231, 0.6);
+    width: 5%;
+    padding: 10px;
+    margin: auto auto auto auto;
+}
+
+
+.animate {
+    -webkit-animation: animatezoom 0.6s;
+    animation: animatezoom 0.6s
+}
+
+@-webkit-keyframes animatezoom {
+    from {-webkit-transform: scale(0)}
+    to {-webkit-transform: scale(1)}
+  }
+  
+@keyframes animatezoom {
+    from {transform: scale(0)}
+    to {transform: scale(1)}
+}
