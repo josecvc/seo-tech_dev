@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap5
 from flask_apscheduler import APScheduler
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 from forms import *
@@ -22,13 +22,13 @@ from markupsafe import escape
 
 
 app = Flask(__name__, instance_relative_config=True)
-# app.config["SQLALCHEMY_DATABASE_URI"] =\
-#       "sqlite:///vgset.db"
+app.config["SQLALCHEMY_DATABASE_URI"] =\
+      "sqlite:///vgset.db"
 
 ## For testing purposes
-app.config["TESTING"] = True
-app.config["SQLALCHEMY_DATABASE_URI"] =\
-      "sqlite:///"
+# app.config["TESTING"] = True
+# app.config["SQLALCHEMY_DATABASE_URI"] =\
+#       "sqlite:///"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["SCHEDULER_API_ENABLED"] = True
@@ -128,7 +128,7 @@ class Genre(db.Model):
     name = db.Column(db.String(30))
 
     def __repr__(self):
-        return f"<Genre>: {self.genre}"
+        return f"<Genre>: {self.name}"
 
 class Platform(db.Model):
     __tablename__ = "platform"
@@ -378,25 +378,53 @@ def account_settings():
 def landing():
     if current_user.is_authenticated: # redirect logged in user
         return redirect(url_for("home"))
-
     return render_template("landing.html")
 
 
 @app.route("/home/", methods=["POST", "GET"])
 @login_required
 def home():
-    return render_template("home.html")
+    filter_seven = datetime.today() - timedelta(days = 7)
+    filter_thirty = datetime.today() - timedelta(weeks=4)
+    # retrieve all games played in the last 7 days
+
+    frags_last_seven_days = Frag.query.filter(Frag.last_played >= filter_seven).filter(Frag.user_id == current_user.id).all()
+    top_games_last_month = db.session.query(
+        Game, db.func.count(Frag.game_id), db.func.sum(Frag.time_played)
+        ).outerjoin(
+        Frag, Frag.game_id==Game.id).filter(
+        db.and_(Frag.last_played >= filter_thirty, Frag.user_id == current_user.id)).group_by(Frag.game_id).order_by(
+        db.func.count(Frag.game_id).desc(), db.func.sum(Frag.time_played).desc()).all()
+    
+    user_collections = Collection.query.filter(Collection.updated >= filter_seven).filter(Collection.user_id == current_user.id).order_by(Collection.updated).limit(10).all()
+
+    return render_template("home.html", recent_frags = frags_last_seven_days, top_frags = top_games_last_month, collections = user_collections)  
 
 @app.route("/games/", methods=["POST", "GET"])
 def games():
-    ## this is going to be a series of queries
+    ## this is going to be a series of queries...
     # newly released games
     # most popular games of current year
     # most popular games of all time
     # most trending games
     # popular genres
+    filter_month = datetime.today() - timedelta(weeks=4)
+    filter_12month = datetime.today() - timedelta(weeks=52)
 
-    return render_template("games.html")
+    new_games = db.session.query(Game).filter(db.and_(Game.released >= filter_12month, Game.released <= datetime.today())).order_by(Game.released.desc()).all()
+  
+    top_games_month = db.session.query(Game, db.func.count(Frag.game_id), db.func.sum(Frag.time_played)).join(
+        Frag, Frag.game_id == Game.id
+    ).filter(Frag.last_played >= filter_month).order_by(
+        db.func.count(Frag.game_id).desc(), db.func.sum(Frag.time_played).desc()).group_by(Game.id).limit(10).all() 
+
+    top_genres_month = db.session.query(
+            Genre, db.func.count(Frag.game_id), db.func.sum(Frag.time_played)
+        ).join(Game.genres).join(Frag, Frag.game_id==Game.id).filter(Frag.last_played >= filter_month).group_by(Frag.game_id).order_by(
+        db.func.count(Frag.game_id).desc(), db.func.sum(Frag.time_played).desc()).limit(15).all()
+ 
+ 
+    return render_template("games.html", new_games = new_games, top_games_month = top_games_month, top_genres_month=top_genres_month)
 
 @app.route("/games/<int:game_id>/", methods=["POST", "GET"]) 
 def game_page(game_id:int):
@@ -444,7 +472,29 @@ def user_report(username:str):
     except:
         return render_template("e404.html"), 404
     else:
-        return render_template("user_page.html", user = reqUser)
+        
+        filter_seven = datetime.today() - timedelta(days=7)
+        """
+        For ease we will always look at the last seven days.
+        We can show the user their top games, top genres, top times to play, a graph of their playtime by date
+        """
+        top_games_past_week = db.session.query(
+        Game, db.func.count(Frag.game_id), db.func.sum(Frag.time_played)
+        ).outerjoin(
+        Frag, Frag.game_id==Game.id).filter(
+        db.and_(Frag.last_played >= filter_seven, Frag.user_id == reqUser.id)).group_by(Frag.game_id).order_by(
+        db.func.count(Frag.game_id).desc(), db.func.sum(Frag.time_played).desc()).limit(5).all()
+
+        top_genres_past_week = db.session.query(
+            Genre, db.func.count(Frag.game_id), db.func.sum(Frag.time_played)
+        ).join(Game.genres).join(Frag, Frag.game_id==Game.id).filter(Frag.user_id == reqUser.id).group_by(Frag.game_id).order_by(
+        db.func.count(Frag.game_id).desc(), db.func.sum(Frag.time_played).desc()).limit(5).all()
+
+        top_times = db.session.query(Frag.last_played).filter(db.and_(Frag.last_played >= filter_seven, Frag.user_id == reqUser.id)).order_by(Frag.last_played.asc()).all()
+
+        top_times_to_play = db.session.query(Frag.last_played, db.func.count(Frag.last_played))
+
+        return render_template("user_pages/user_report.html", user=reqUser, games = top_games_past_week, genres = top_genres_past_week) 
 
 @app.route("/user/<string:username>/library", methods=["POST", "GET"])
 def user_library(username:str):
@@ -453,7 +503,7 @@ def user_library(username:str):
     except:
         return render_template("e404.html"), 404
     else:
-        session_select = Frag.query.filter_by(user_id = reqUser.id).order_by(Frag.last_played.desc())
+        session_select = db.session.query(Frag).filter_by(user_id = reqUser.id).order_by(Frag.last_played.desc())
         sessions = db.paginate(session_select) 
 
         f_form = FragForm(request.form)
@@ -501,7 +551,7 @@ def user_ratings(username:str):
     except:
         return render_template("e404.html"), 404
     else:
-        user_ratings = Rating.query.filter_by(user_id=reqUser.id)
+        user_ratings = Rating.query.filter_by(user_id=reqUser.id).all()
         return render_template("user_pages/user_ratings.html", user = reqUser, ratings=user_ratings)
 
 @app.route("/user/<string:username>/collections/<int:collection_id>/", methods=["POST", "GET"])
@@ -655,7 +705,7 @@ async def get_games(session, url):
             real_g = g_json["results"]
             ## then go through the list and convert into Game objects
             for game in real_g: # returns the value for each key
-                if game["added"] < 5 or "(itch)" in game["name"].lower(): # filter out fluff (lol)
+                if game["added"] <= 35 or "(itch)" in game["name"].lower(): # filter out fluff (lol)
                     break
 
                 genres = game["genres"] ## get genres, now we need to check which ones are in the database

@@ -1,0 +1,70 @@
+.horz-scroll  {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.game-list {
+    display: flex;
+    flex-flow: row wrap;
+    padding-left: 0px;
+    margin: 0 auto;
+}
+
+.game-slot, .genre-slot {
+    position: relative;
+    display:inline-flex;
+    height:200px;
+    list-style: none;
+    margin: 10px;
+    padding-left: 0px;
+}
+
+.genre-slot {
+    position: relative;
+    display:inline-flex;
+    list-style: none;
+    margin: 0px 5px 0px;
+    padding: 10px;
+    background-color: rgba(50, 70, 80, 0.7);
+    border-radius: 10px;
+    font-size:larger;
+    height:unset;
+}
+
+.image-backdrop {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+    overflow: hidden;
+    background: transparent no-repeat center;
+    background-size: cover;
+    object-fit: cover;
+}
+
+.info{
+    position: absolute;
+    z-index: 4;
+    /* word-break:break-all; */
+    /* white-space: pre-line; */
+}
+
+.part-blur {
+    background: rgba(50, 70, 80, 0.7);
+    overflow: hidden;
+    height: 100%;
+}
+
+.backdrop-pic {
+    width: auto;
+    height: 100%;
+    overflow: hidden;
+    opacity: 0.5;
+    filter:  invert(0%) sepia(6%) saturate(1%) hue-rotate(285deg) brightness(50%);
+}
+
+.game-title {
+    font-weight: bold;
+}

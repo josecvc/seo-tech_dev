@@ -11,10 +11,6 @@ body {
 }
 
 main {
-    /* overflow-x: hidden; */
-    /* position:absolute; */
-    
-    /* background: linear-gradient(14deg, rgba(242,189,210,1) 13%, rgba(232,232,235,1) 55%, rgba(0,212,255,1) 100%); */
     min-height:100%;
     width: 100%;
     margin:0;

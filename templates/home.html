@@ -1,9 +1,96 @@
 {% extends "template.html" %}
 
 {%block title%}Home | Vidya!{%endblock%} 
-<!-- {%block head%} <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='styles/landing.css')}}"> {%endblock%} -->
-{%block content%}
+{%block head%} <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='styles/home.css')}}"> {%endblock%}
 
+{%block content%}
+<div class="center-container">
+    <div class="top-header">
+        <h1 class="welcome-username">Hello {{current_user.username}}</h1>
+    </div>
+    <div class="content-focus">
+        <div class="recent-games">
+            <h2 class="">Recently Played Games</h2>
+            <ul class="recent-list horz-scroll">
+                {% for frag in recent_frags %}
+                <li class="recent-game-slot" {%if loop.index == 1%}style="margin-left:0px;"{%elif not loop.nextitem%}style="margin-right:0px;" {%endif%}>
+                    <div class="image-backdrop">
+                        <img class="backdrop-pic" src="{{frag.game.background}}">
+                        <div class="part-blur">
+                        </div>
+                        
+                    </div>
+                    <div class="log-info">
+                        <div class="game-title">
+                            <a class="game-link" href="/games/{{frag.game.id}}">{{frag.game.title}}</a>
+                            
+                        </div>
+                        <div class="last_played">
+                            <p class="play-date">Played on {{frag.last_played.strftime("%d/%m/%Y %H:%M:%S")}}</p>
+                        </div>
+                        <div class="hours-played">
+                            <span class="play-hours">Playtime: {%if frag.time_played>=7200 %} {{frag.time_played // 3600}} hours{%elif frag.time_played >= 60%} {{frag.time_played // 60 }} minutes{%else%}Less than a minute{%endif%}</span>
+                        </div>
+                    </div>
+                    
+                </li>
+                {%endfor%}
+            </ul>
+        </div>
+        <div class="top-games">
+            <h2 class="">Top Games in the last Month</h2>
+            <ul class="top-list horz-scroll">
+                {% for game, count, time_played in top_frags %}
+                <li class="top-game-slot" {%if loop.index == 1%}style="margin-left:0px;"{%elif not loop.nextitem%}style="margin-right:0px;" {%endif%}>
+                    <div class="image-backdrop">
+                        <img class="backdrop-pic" src="{{game.background}}">
+                        <div class="part-blur">
+                        </div> 
+                    </div>
+                    <div class="log-info">
+                        <div class="game-title">
+                            <span>#{{loop.index}}</span>
+                            <a class="game-link" href="/games/{{game.id}}">{{game.title}}</a>
+                        </div>
+                        <div class="times-played">
+                            <span class="play-count">Plays: {{count}}</span>
+                        </div>
+                        <div class="hours-played">
+                            <span class="play-hours">Total playtime: {%if time_played>=7200 %} {{time_played // 3600}} hours{%elif time_played >= 60%} {{time_played // 60 }} minutes{%else%}Less than a minute{%endif%}</span>
+                        </div>
+                    </div>
+                    
+                </li>
+                {%endfor%}
+            </ul>
+        </div>
+        <div class="user-collections">
+            <h2 class="">Your Recently Updated Collections</h2>
+            <ul class="recent-collections horz-scroll">
+                {% for collection in collections %}
+                <li class="collection-slot" {%if loop.index == 1%}style="margin-left:0px;"{%elif not loop.nextitem%}style="margin-right:0px;" {%endif%}>
+                    <div class="image-backdrop-collage">
+                        
+                        <div class="part-blur">
+                        </div> 
+                    </div>
+                    
+                    <div class="collection-info">
+                        <div class="collection-title">
+                            <a class="collection-link" href="/user/{{current_user.username}}/collections/{{collection.id}}">{{collection.name}}</a>
+                        </div>
+                       <div class="collection-updated">
+                        <span>Updated on <time>{{collection.updated.strftime("%d-%m-%Y")}}</time></span>
+                       </div>
+                    </div>
+                    
+                </li>
+                {%endfor%}
+            </ul>
+        </div>
+    </div>
+
+</div>
 {%endblock%}
 
 {%block scripts%}

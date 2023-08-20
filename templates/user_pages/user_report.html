@@ -1,0 +1,51 @@
+{%extends "user_page.html"%}
+
+{%block focus_title%}Report of the Week{%endblock%}
+{%block head%}<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='styles/user-page.css')}}">{%endblock%}
+{%block focus%}
+<div class="top-games">
+    <h2>Top Games</h2>
+    {%for game, count, time in games%}
+    {%if loop.index == 1%}
+    <div class="game-slot first-game">
+        <div class="image-backdrop">
+            <img class="backdrop-pic" src="{{game.background}}">
+            <div class="part-blur">
+            </div> 
+        </div>
+        <div class="log-info">
+            <div class="game-title">
+                <p class="top-identifier">TOP GAME</p>
+                <a class="game-link" href="/games/{{game.id}}">{{game.title}}</a>
+            </div>
+        </div>
+        
+    </div>
+    {%else%}
+    <div class="other-top-game">
+        <div class="game-title">
+            <span>#{{loop.index}}</span>
+            <a class="game-link" href="/games/{{game.id}}">{{game.title}}</a>
+        </div>
+    </div>
+    {%endif%}
+    {%endfor%}
+</div>
+<div class="top-genres">
+    <h2>Top Genres</h2>
+    <ul class="top-genre-list horz-scroll">
+        {% for genre, count, times in genres %}
+        <li class="genre-slot" {%if loop.index == 1%}style="margin-left:0px;"{%elif not loop.nextitem%}style="margin-right:0px;" {%endif%}>
+            <div class="genre-info">
+                <div class="genre-title">
+                    <span>{{genre.name}}</span>
+                </div>
+            </div>
+        </li>
+        {%endfor%}
+    </ul>
+</div>
+<div class="playtime-graph">
+
+</div>
+{%endblock%}

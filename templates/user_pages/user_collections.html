@@ -20,23 +20,27 @@
 <ul class="collection-list">
 {% for collection in collections.items%}
     {%if not collection.public == False or (current_user.is_authenticated and current_user.id == user.id)%} <!-- Public collection or you're looking at your own collections -->
-    <li class="collection-slot">
-        <a href="collections/{{collection.id}}">
-            <div class="collecton-info">
-                <div class="collection-title">
-                    {{collection.name}}
-                </div>
-                <div class="collection-created">
-                    <span class="creation-date">Created {{collection.created.strftime("%d/%m/%Y")}}</span>
-                </div>
-                <div class="collection-updated">
-                    <span class="creation-date">Updated {{collection.updated.strftime("%d/%m/%Y")}}</span>
-                </div>
+        <li class="collection-slot" {%if loop.index == 1%}style="margin-left:0px;"{%elif not loop.nextitem%}style="margin-right:0px;" {%endif%}><a class="collection-link" href="/user/{{current_user.username}}/collections/{{collection.id}}">
+            <div class="image-backdrop-collage">
+                
+                <div class="part-blur">
+                </div> 
             </div>
-        </a>
-    </li>
-    {%endif%}
-{%endfor%}
+            
+            <div class="collection-info">
+                <div class="collection-title">
+                    <span>{{collection.name}}</span>
+                </div>
+               <div class="collection-updated">
+                <span>Updated on <time>{{collection.updated.strftime("%d-%m-%Y")}}</time></span>
+               </div>
+            </div>
+            {%endif%}
+            </a>
+        </li>
+        {%endfor%}
+    </ul>
+
 </ul>
 
 <div class="pagination">
