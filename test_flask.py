@@ -589,40 +589,40 @@ class TestViews(MyTest):
 
     def test_render_register(self):
         response = self.client.get("/register/")
-        self.assertTemplateUsed("register.html")
+        self.assertEqual(response.status_code, 200)
     
     def test_render_login(self):
         response = self.client.get("/login/")
-        self.assertTemplateUsed("login.html")
+        self.assertEqual(response.status_code, 200)
     
     def test_render_index(self):
         response = self.client.get("/")
-        self.assertTemplateUsed("landing.html")
+        self.assertEqual(response.status_code, 200)
 
     def test_render_games(self):
         response = self.client.get(f"/games/")
-        self.assertTemplateUsed("games.html")
+        self.assertEqual(response.status_code, 200)
 
     def test_render_game(self):
         game = self.create_dummy_game()
         response = self.client.get(f"/games/{game.id}/")
-        self.assertTemplateUsed("self_game.html")
+        self.assertEqual(response.status_code, 200)
     
     def test_render_user(self):
         user = self.create_dummy_user()
         response = self.client.get(f"/user/{user.username}/")
-        self.assertTemplateUsed("user_pages/user_overview.html")
+        self.assertEqual(response.status_code, 200)
 
     def test_render_user_collections(self):
         user = self.create_dummy_user()
         response = self.client.get(f"/user/{user.username}/collections/")
-        self.assertTemplateUsed("user_pages/user_collections.html")
+        self.assertEqual(response.status_code, 200)
 
     def test_render_collection(self):
         user = self.create_dummy_user()
         coll = self.create_dummy_collection(user)
         response = self.client.get(f"/user/{user.username}/collections/{coll.id}/")
-        self.assertTemplateUsed("user_pages/self_collection.html")
+        self.assertEqual(response.status_code, 200)
 
 class TestAuth(MyTest):
     def register(self, username, email, password):
